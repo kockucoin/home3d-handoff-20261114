@@ -27,7 +27,8 @@ function cyl(name, cx, cy, r, z1, z2, color, op = 1, group = 'misc') {
 const door = (from, to, name, leaf = false) => ({ from, to, bottom: 0, top: 2100, name, leaf });
 const win = (from, to, name, bottom = 900, top = 2300) => ({ from, to, bottom, top, name, glass: true });
 
-function wall(name, x1, y1, x2, y2, t, openings = []) {
+// out: 外墙朝外的方向 'n'|'s'|'e'|'w'（内墙为 null）。3D 页面据此把朝向镜头的外墙压低。
+function wall(name, x1, y1, x2, y2, t, openings = [], out = null) {
   const horiz = y1 === y2;
   const c = horiz ? y1 : x1;
   const a = Math.min(horiz ? x1 : y1, horiz ? x2 : y2) - t / 2;
@@ -36,6 +37,7 @@ function wall(name, x1, y1, x2, y2, t, openings = []) {
     if (e - s < 1 || z2 - z1 < 1) return;
     if (horiz) box(nm, s, c - th / 2, e, c + th / 2, z1, z2, color, op, group);
     else box(nm, c - th / 2, s, c + th / 2, e, z1, z2, color, op, group);
+    prims[prims.length - 1].wm = { horiz, out };
   };
   let cur = a;
   for (const o of [...openings].sort((p, q) => p.from - q.from)) {
@@ -50,23 +52,23 @@ function wall(name, x1, y1, x2, y2, t, openings = []) {
 }
 
 // 外墙
-wall('wall_study_n', 843, 0, 3976, 0, EXT, [win(1581, 3384, 'window_study_n')]);
-wall('wall_study_w', 843, 0, 843, 2240, EXT, [win(575, 1580, 'window_study_w')]);
-wall('wall_bath_a_w', 843, 2240, 843, 4274, EXT);
+wall('wall_study_n', 843, 0, 3976, 0, EXT, [win(1581, 3384, 'window_study_n')], 'n');
+wall('wall_study_w', 843, 0, 843, 2240, EXT, [win(575, 1580, 'window_study_w')], 'w');
+wall('wall_bath_a_w', 843, 2240, 843, 4274, EXT, [], 'w');
 wall('wall_study_e', 3976, 0, 3976, 3438, EXT);
-wall('wall_kitchen_n', 3976, 575, 5900, 575, EXT, [win(4300, 5500, 'window_kitchen')]);
-wall('wall_east', 5900, 575, 5900, 7709, EXT, [door(4240, 5140, 'entry_door', true)]);
-wall('wall_living_step', 5900, 7709, 7003, 7709, EXT);
-wall('wall_living_e', 7003, 7709, 7003, 12500, EXT);
-wall('wall_balcony_s', 3384, 12500, 7003, 12500, EXT, [win(3700, 6700, 'window_balcony', 1000, 2400)]);
-wall('wall_balcony_w', 3384, 11462, 3384, 12500, EXT);
-wall('wall_bedroom_a_n', 0, 4274, 2877, 4274, EXT, [win(150, 700, 'window_bedroom_a')]);
-wall('wall_west', 0, 4274, 0, 11704, EXT);
-wall('wall_bedroom_b_s', 0, 11704, 3384, 11704, EXT, [{ from: 903, to: 2667, bottom: 450, top: 2400 }]);
+wall('wall_kitchen_n', 3976, 575, 5900, 575, EXT, [win(4300, 5500, 'window_kitchen')], 'n');
+wall('wall_east', 5900, 575, 5900, 7709, EXT, [door(4240, 5140, 'entry_door', true)], 'e');
+wall('wall_living_step', 5900, 7709, 7003, 7709, EXT, [], 'n');
+wall('wall_living_e', 7003, 7709, 7003, 12500, EXT, [], 'e');
+wall('wall_balcony_s', 3384, 12500, 7003, 12500, EXT, [win(3700, 6700, 'window_balcony', 1000, 2400)], 's');
+wall('wall_balcony_w', 3384, 11462, 3384, 12500, EXT, [], 'w');
+wall('wall_bedroom_a_n', 0, 4274, 2877, 4274, EXT, [win(150, 700, 'window_bedroom_a')], 'n');
+wall('wall_west', 0, 4274, 0, 11704, EXT, [], 'w');
+wall('wall_bedroom_b_s', 0, 11704, 3384, 11704, EXT, [{ from: 903, to: 2667, bottom: 450, top: 2400 }], 's');
 // 卧室B 飘窗
-wall('wall_bay_w', 903, 11704, 903, 12460, EXT);
-wall('wall_bay_e', 2667, 11704, 2667, 12460, EXT);
-wall('wall_bay_s', 903, 12460, 2667, 12460, EXT, [win(1050, 2520, 'window_bedroom_b', 450, 2400)]);
+wall('wall_bay_w', 903, 11704, 903, 12460, EXT, [], 'w');
+wall('wall_bay_e', 2667, 11704, 2667, 12460, EXT, [], 'e');
+wall('wall_bay_s', 903, 12460, 2667, 12460, EXT, [win(1050, 2520, 'window_bedroom_b', 450, 2400)], 's');
 // 内墙
 wall('wall_study_s', 843, 2240, 3976, 2240, INT, [door(3000, 3800, 'study_door')]);
 wall('wall_kitchen_s', 3976, 3438, 5900, 3438, INT, [door(4300, 5100, 'kitchen_door')]);
@@ -126,7 +128,7 @@ cyl('living_plant_pot', 3660, 8150, 160, 560, 800, '#3f9a8a', 1, F);
 sph('living_plant', 3660, 8150, 1050, 260, '#3f7a3a', 1, F);
 box('living_painting', 6870, 8100, 6883, 9300, 1400, 2150, '#c8b6c4', 1, F);
 box('living_ac', 6700, 10150, 6883, 11050, 2150, 2450, '#fafafa', 1, 'device');
-box('living_curtain', 3976, 11280, 6489, 11330, 0, 2600, '#6b7078', 0.85, 'device');
+box('living_curtain', 3976, 11360, 6489, 11400, 1500, 2450, '#f4f2ec', 1, 'device'); // 白色罗马帘（半放下）
 // 沙发旁的大 L 型升降书桌 + 显示器 + 办公椅
 box('living_desk_top', 5450, 10850, 6880, 11330, 720, 750, '#7a4a2a', 1, F);
 box('living_desk_return', 5450, 10250, 5900, 10850, 720, 750, '#7a4a2a', 1, F);
@@ -168,8 +170,7 @@ box('bedroom_b_pillow', 250, 10300, 550, 11100, 520, 620, '#cfd3d8', 1, F);
 box('bedroom_b_nightstand', 120, 9450, 520, 9900, 0, 550, '#f2efe8', 1, F);
 box('bedroom_b_wardrobe', 2650, 8110, 3250, 8700, 0, 2000, '#ece8de', 1, F);
 box('bedroom_b_bay_seat', 903, 11584, 2667, 12340, 0, 450, '#d9d4cc', 1, F);
-box('bedroom_b_curtain', 850, 11540, 1300, 11580, 0, 2600, '#b8a68a', 0.9, 'device');
-box('bedroom_b_curtain', 2270, 11540, 2720, 11580, 0, 2600, '#b8a68a', 0.9, 'device');
+box('bedroom_b_curtain', 1050, 12300, 2520, 12330, 1600, 2400, '#e9e2d6', 1, 'device'); // 飘窗卷帘（半放下）
 // 书房、卫生间、阳台（酷家乐方案位置）
 box('study_desk', 1627, 1000, 2827, 1420, 720, 750, '#d8d0c0', 1, F);
 box('study_desk_side', 1627, 1000, 1667, 1420, 0, 720, '#d8d0c0', 1, F);
@@ -185,23 +186,30 @@ box('bath_b_screen', 900, 6650, 985, 7990, 0, 2000, '#cfe3ee', 0.3, F);
 box('balcony_washer', 3505, 11530, 4105, 12380, 0, 1200, '#f5f5f5', 1, F);
 box('balcony_lounge', 4600, 11800, 5500, 12450, 0, 450, '#5b5b5b', 1, F);
 
-// ---------- 灯具（HA 控制对象，按照片款式） ----------
-// shape: square 方形吸顶 / round 圆形吸顶 / pendant 吊灯 / bulb 灯泡 / floor 落地灯
+// ---------- 灯具（HA 控制对象，按照片款式；2026-11-14 按新照片更新） ----------
+// shape: square 方形吸顶 / round 圆形吸顶 / bulb 灯泡 / floor 落地灯
+//        lantern 纸灯笼吊灯 / drum 布罩吊灯 / woven 编织吊灯 / mushroom 蘑菇台灯
+// shadow: 该灯在 3D 页面里投射阴影（光被墙挡住，只照亮本房间）
 const lights = [
-  { id: 'living_ceiling_light', label: '客厅吸顶灯', room: '客厅', x: 5300, y: 9300, shape: 'square', s: 580 },
-  { id: 'living_floor_lamp', label: '客厅落地灯', room: '客厅', x: 3980, y: 10450, shape: 'floor' },
-  { id: 'dining_pendant', label: '餐厅吊灯', room: '餐厅', x: 4400, y: 4800, shape: 'pendant', s: 200 },
-  { id: 'kitchen_light', label: '厨房灯', room: '厨房', x: 4940, y: 2000, shape: 'square', s: 580 },
-  { id: 'bedroom_b_ceiling_light', label: '卧室B吸顶灯', room: '卧室B', x: 1700, y: 9900, shape: 'square', s: 450 },
-  { id: 'bedroom_a_ceiling_light', label: '卧室A灯泡', room: '卧室A', x: 1440, y: 5460, shape: 'bulb' },
-  { id: 'study_light', label: '书房灯', room: '书房', x: 2410, y: 1240, shape: 'round', s: 300 },
+  { id: 'living_ceiling_light', label: '客厅灯笼吊灯', room: '客厅', x: 5150, y: 9000, shape: 'lantern', s: 250, shadow: true },
+  { id: 'living_floor_lamp', label: '客厅落地灯', room: '客厅', x: 3720, y: 10250, shape: 'floor' },
+  { id: 'dining_pendant', label: '餐厅布罩吊灯', room: '餐厅', x: 4400, y: 4800, shape: 'drum', s: 230, shadow: true },
+  { id: 'dining_table_lamp', label: '餐边柜蘑菇灯', room: '餐厅', x: 5720, y: 3650, shape: 'mushroom' },
+  { id: 'kitchen_light', label: '厨房灯', room: '厨房', x: 4940, y: 2000, shape: 'square', s: 580, shadow: true },
+  { id: 'bedroom_b_ceiling_light', label: '卧室B编织吊灯', room: '卧室B', x: 1500, y: 10300, shape: 'woven', s: 260, shadow: true },
+  { id: 'bedroom_a_ceiling_light', label: '卧室A灯泡', room: '卧室A', x: 1440, y: 5460, shape: 'bulb', shadow: true },
+  { id: 'study_light', label: '书房灯', room: '书房', x: 2410, y: 1240, shape: 'round', s: 300, shadow: true },
   { id: 'bath_a_light', label: '卫A灯', room: '卫A', x: 1860, y: 3227, shape: 'round', s: 180 },
   { id: 'bath_b_light', label: '卫B灯', room: '卫B', x: 1215, y: 7321, shape: 'round', s: 180 },
   { id: 'balcony_light', label: '阳台灯', room: '阳台', x: 5150, y: 12000, shape: 'round', s: 180 },
 ];
 for (const l of lights) {
   const L = 'light';
-  if (l.shape === 'square') { box(l.id, l.x - l.s / 2, l.y - l.s / 2, l.x + l.s / 2, l.y + l.s / 2, 2630, 2690, C.lamp, 1, L); l.z = 2550; }
+  if (l.shape === 'lantern') { cyl(`${l.id}_cord`, l.x, l.y, 6, 2400, 2700, '#dddddd', 1, F); sph(l.id, l.x, l.y, 2150, l.s, C.lamp, 1, L); l.z = 2150; }
+  else if (l.shape === 'drum') { cyl(`${l.id}_cord`, l.x, l.y, 6, 2130, 2700, '#bbbbbb', 1, F); ell(l.id, l.x, l.y, l.s, l.s, 1850, 2130, C.lamp, 1, L, 0.75); l.z = 1900; }
+  else if (l.shape === 'woven') { cyl(`${l.id}_cord`, l.x, l.y, 6, 2330, 2700, '#222222', 1, F); sph(l.id, l.x, l.y, 2200, l.s * 0.6, C.lamp, 1, L); l.z = 2150; }
+  else if (l.shape === 'mushroom') { cyl(`${l.id}_stem`, l.x, l.y, 25, 1000, 1250, '#f0e6d2', 1, F); sph(l.id, l.x, l.y, 1260, 110, '#ffd7a0', 1, L); l.z = 1240; }
+  else if (l.shape === 'square') { box(l.id, l.x - l.s / 2, l.y - l.s / 2, l.x + l.s / 2, l.y + l.s / 2, 2630, 2690, C.lamp, 1, L); l.z = 2550; }
   else if (l.shape === 'round') { cyl(l.id, l.x, l.y, l.s, 2630, 2690, C.lamp, 1, L); l.z = 2550; }
   else if (l.shape === 'pendant') {
     cyl(`${l.id}_cord`, l.x, l.y, 6, 2050, 2700, '#333333', 1, F);
@@ -218,9 +226,70 @@ for (const l of lights) {
   }
   for (const p of prims) if (p.group === L && (p.name === l.id || p.name.startsWith(l.id + '_'))) p.lid = l.id;
 }
+// 非灯设备。anchor = 图标位置（mm）；blind 的 x1/x2/y/top/bottom 为帘子范围
 const devices = [
-  { id: 'living_tv', label: '客厅电视' }, { id: 'living_ac', label: '客厅空调' }, { id: 'bedroom_a_ac', label: '卧室A空调' },
-  { id: 'living_curtain', label: '客厅窗帘' }, { id: 'bedroom_b_curtain', label: '卧室B窗帘' }, { id: 'entry_door', label: '入户门' },
+  { id: 'living_tv', label: '客厅电视', type: 'tv', room: '客厅', anchor: [3500, 8950, 1750] },
+  { id: 'living_ac', label: '客厅空调', type: 'ac', room: '客厅', anchor: [6800, 10600, 2550] },
+  { id: 'bedroom_a_ac', label: '卧室A空调', type: 'ac', room: '卧室A', anchor: [260, 5700, 2550] },
+  { id: 'living_curtain', label: '客厅罗马帘', type: 'blind', room: '客厅', anchor: [5230, 11380, 2500], x1: 3976, x2: 6489, y: 11380, top: 2450, bottom: 120, axis: 'x' },
+  { id: 'bedroom_b_curtain', label: '卧室B卷帘', type: 'blind', room: '卧室B', anchor: [1785, 12300, 2450], x1: 1050, x2: 2520, y: 12300, top: 2400, bottom: 470, axis: 'x' },
+  { id: 'entry_door', label: '入户门', type: 'door', room: '客厅', anchor: [5900, 4690, 2200] },
+];
+
+// ---------- 3D 页面用的家具布局（语义化，由 app/home3d.js 生成精细模型） ----------
+// rot = 家具"正面"朝向（度）：0 北 / 90 东 / 180 南 / 270 西。尺寸单位 mm
+const layout = [
+  // 客厅
+  { t: 'rug', x1: 4250, y1: 7700, x2: 6000, y2: 10200, color: '#1c2b78' },
+  { t: 'sofa', x: 6440, y: 8900, rot: 270, w: 2000, d: 880, color: '#8f9499' },
+  { t: 'coffeeOval', x: 5150, y: 8950, rx: 320, ry: 560, h: 420 },
+  { t: 'pouf', x: 5750, y: 9950, r: 260, h: 200, color: '#9fb3a8' },
+  { t: 'pouf', x: 5480, y: 8000, r: 190, h: 170, color: '#6b4a35' },
+  { t: 'tvCabinet', x: 3680, y: 8950, rot: 90, w: 2100, d: 420, h: 520, color: '#7a3a22' },
+  { t: 'tv', x: 3470, y: 8950, rot: 90, w: 1230, h: 720, z: 1030 },
+  { t: 'plant', x: 3700, y: 8150, z: 520, r: 150, h: 650 },
+  { t: 'deskL', x1: 5450, y1: 10850, x2: 6880, y2: 11330, rx2: 5900, ry1: 10250 },
+  { t: 'monitor', x: 6350, y: 11220, rot: 0, w: 620, z: 750 },
+  { t: 'officeChair', x: 6350, y: 10500, rot: 180, color: '#2e5a44' },
+  { t: 'painting', x: 6878, y: 8900, rot: 270, w: 1100, h: 700, z: 1450, style: 'blossom' },
+  { t: 'painting', x: 2940, y: 4900, rot: 90, w: 600, h: 1100, z: 1100, style: 'checker' },
+  { t: 'ac', x: 6860, y: 10600, rot: 270, w: 900, z: 2150 },
+  // 餐厅
+  { t: 'tableRound', x: 4400, y: 4800, r: 450, h: 750 },
+  { t: 'rattanChair', x: 3820, y: 4650, rot: 76 },
+  { t: 'rattanChair', x: 4050, y: 5320, rot: 35 },
+  { t: 'armchair', x: 4520, y: 5560, rot: 0, color: '#24392e' },
+  { t: 'shelfOpen', x: 5720, y: 3850, rot: 270, w: 740, d: 330, h: 1000 },
+  // 厨房
+  { t: 'counter', x1: 4100, y1: 695, x2: 5780, y2: 1295, h: 850, color: '#e3d3b4' },
+  { t: 'counter', x1: 5180, y1: 1295, x2: 5780, y2: 3250, h: 850, color: '#e3d3b4' },
+  { t: 'upperCabinet', x1: 5430, y1: 1295, x2: 5780, y2: 3250, z1: 1500, z2: 2200, color: '#e3d3b4' },
+  { t: 'sink', x: 4800, y: 990 },
+  { t: 'stove', x: 5480, y: 2350 },
+  // 卧室A
+  { t: 'bed', x: 1120, y: 5700, rot: 90, w: 1500, l: 2000, frame: '#f3eeee', sheet: '#f2d8dc', duvet: '#f7f1ec', pillow: '#e7c23a' },
+  { t: 'nightstand', x: 330, y: 4640, rot: 90, color: '#8a5a32' },
+  { t: 'ac', x: 150, y: 5700, rot: 90, w: 850, z: 2150 },
+  // 卧室B
+  { t: 'bed', x: 1120, y: 10700, rot: 90, w: 1800, l: 2000, frame: '#efe9df', sheet: '#5a3a2c', duvet: '#a9bcd6', pillow: '#e8e4dc' },
+  { t: 'nightstand', x: 330, y: 9550, rot: 90, color: '#f2efe8' },
+  { t: 'wardrobe', x: 3030, y: 9300, rot: 270, w: 1000, d: 580, h: 2050, color: '#ece8de' },
+  { t: 'baySeat', x1: 903, y1: 11704, x2: 2667, y2: 12340 },
+  // 书房
+  { t: 'desk', x: 2227, y: 400, rot: 180, w: 1200, d: 560 },
+  { t: 'officeChair', x: 2227, y: 1000, rot: 0, color: '#333333' },
+  { t: 'plant', x: 1300, y: 1900, z: 0, r: 170, h: 1100 },
+  // 卫生间
+  { t: 'shower', x1: 963, y1: 2300, x2: 1863, y2: 3200 },
+  { t: 'toilet', x: 2380, y: 2560, rot: 180 },
+  { t: 'vanity', x: 1230, y: 3750, rot: 90, w: 800 },
+  { t: 'toilet', x: 1270, y: 6870, rot: 180 },
+  { t: 'vanity', x: 1900, y: 6900, rot: 180, w: 700 },
+  { t: 'shower', x1: 120, y1: 7250, x2: 1000, y2: 7990 },
+  // 阳台
+  { t: 'washer', x: 3800, y: 12080, rot: 0 },
+  { t: 'lounge', x: 5100, y: 12060, rot: 0 },
+  { t: 'plant', x: 6650, y: 12150, z: 0, r: 180, h: 900 },
 ];
 
 // ---------- 导出 OBJ / MTL（单位 cm，Y 向上，Z 向南） ----------
@@ -265,132 +334,27 @@ for (const [k, { color, op }] of mats) {
 writeFileSync(join(OUT, 'home.obj'), obj);
 writeFileSync(join(OUT, 'home.mtl'), mtl);
 
-// ---------- 预览页 ----------
-const data = { H, prims, lights, devices, rooms: [...rooms.map(r => ({ label: r.label === '客厅' ? '客厅' : r.label, at: r.label === '客厅' ? [4700, 9000] : r.at })), { label: '餐厅', at: [4400, 4300] }] };
-const html = `<!doctype html>
-<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>我家 3D 户型</title>
-<style>
-:root{--bg:#ece8e1;--panel:rgba(255,255,255,.93);--text:#1d1d1f;--muted:#6e6e73;--border:rgba(0,0,0,.1);--on:#f5a623;--off:#c7c7cc}
-@media (prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#141518;--panel:rgba(32,33,37,.93);--text:#f2f2f2;--muted:#a1a1a6;--border:rgba(255,255,255,.12);--off:#48484a}}
-:root[data-theme=dark]{--bg:#141518;--panel:rgba(32,33,37,.93);--text:#f2f2f2;--muted:#a1a1a6;--border:rgba(255,255,255,.12);--off:#48484a}
-html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:14px/1.4 -apple-system,"PingFang SC","Helvetica Neue",sans-serif;overflow:hidden}
-canvas{display:block;touch-action:none}
-#panel{position:fixed;top:16px;right:16px;width:240px;max-height:calc(100% - 32px);overflow:auto;background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:14px;box-sizing:border-box;-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}
-#panel h1{font-size:16px;margin:0 0 2px}#panel p{margin:0 0 12px;color:var(--muted);font-size:12px}
-.row{display:flex;gap:6px;margin-bottom:10px}.row button{flex:1;white-space:nowrap;padding:7px 2px}
-button{font:inherit;border:1px solid var(--border);background:transparent;color:var(--text);border-radius:9px;padding:7px 8px;cursor:pointer}
-.light{display:flex;align-items:center;gap:10px;width:100%;text-align:left;margin-bottom:6px}
-.dot{width:12px;height:12px;border-radius:50%;background:var(--off);flex:none;transition:.2s}
-.light.on .dot{background:var(--on);box-shadow:0 0 8px var(--on)}
-.light small{margin-left:auto;color:var(--muted)}
-#hint{position:fixed;left:16px;bottom:16px;color:var(--muted);font-size:12px}
-@media (max-width:640px){#panel{top:auto;bottom:0;left:0;right:0;width:auto;max-height:42%;border-radius:14px 14px 0 0}#hint{display:none}}
-</style>
-<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
-</head><body>
-<div id="panel"><h1>我家 3D 户型</h1><p>点灯具或列表即可开关（模拟 Home Assistant）</p>
-<div class="row"><button id="all-on">全开</button><button id="all-off">全关</button><button id="night">夜间</button><button id="cut">矮墙</button></div>
-<div id="list"></div></div>
-<div id="hint">拖动旋转 · 双指/滚轮缩放 · 右键平移</div>
-<script type="module">
-import * as THREE from 'three';
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-const D = ${JSON.stringify(data)};
-const m = v => v / 1000;
-const renderer = new THREE.WebGLRenderer({ antialias: true });
-renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
-renderer.setSize(innerWidth, innerHeight);
-document.body.prepend(renderer.domElement);
-const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(42, innerWidth / innerHeight, 0.1, 200);
-const center = new THREE.Vector3(3.5, 0, 6.3);
-camera.position.set(center.x + 7, 14, center.z + 12);
-const controls = new OrbitControls(camera, renderer.domElement);
-controls.target.copy(center); controls.maxPolarAngle = Math.PI * 0.47; controls.enableDamping = true;
-const hemi = new THREE.HemisphereLight(0xffffff, 0x8a7a66, 1.6); scene.add(hemi);
-const sun = new THREE.DirectionalLight(0xffffff, 1.4); sun.position.set(-6, 14, 18); scene.add(sun);
-const byName = {}, cutMeshes = [], lightMeshes = {};
-for (const p of D.prims) {
-  let geo, pos;
-  if (p.type === 'box') { geo = new THREE.BoxGeometry(m(p.x2 - p.x1), m(p.z2 - p.z1), m(p.y2 - p.y1)); pos = [m((p.x1 + p.x2) / 2), m((p.z1 + p.z2) / 2), m((p.y1 + p.y2) / 2)]; }
-  else if (p.type === 'sph') { geo = new THREE.SphereGeometry(m(p.r), 24, 16); pos = [m(p.cx), m(p.cz), m(p.cy)]; }
-  else { geo = new THREE.CylinderGeometry(m(p.r) * (p.r2 ?? 1), m(p.r), m(p.z2 - p.z1), 40); geo.scale(1, 1, (p.ry ?? p.r) / p.r); pos = [m(p.cx), m((p.z1 + p.z2) / 2), m(p.cy)]; }
-  const mat = new THREE.MeshStandardMaterial({ color: p.color, roughness: 0.85, transparent: p.op < 1, opacity: p.op, depthWrite: p.op >= 1 });
-  const mesh = new THREE.Mesh(geo, mat); mesh.position.set(...pos); mesh.name = p.name; mesh.userData = { p, lid: p.lid }; scene.add(mesh); byName[p.name] = mesh;
-  if (['wall', 'glass', 'door'].includes(p.group) || p.name.includes('curtain')) cutMeshes.push(mesh);
-  if (p.lid) (lightMeshes[p.lid] ||= []).push(mesh);
-}
-for (const r of D.rooms) {
-  const c = document.createElement('canvas'); c.width = 256; c.height = 96; const g = c.getContext('2d');
-  g.font = '600 52px -apple-system,"PingFang SC",sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
-  g.lineWidth = 8; g.strokeStyle = 'rgba(255,255,255,.9)'; g.strokeText(r.label, 128, 48); g.fillStyle = '#333'; g.fillText(r.label, 128, 48);
-  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), depthTest: false }));
-  s.scale.set(1.2, 0.45, 1); s.position.set(m(r.at[0]), 1.3, m(r.at[1])); s.renderOrder = 10; scene.add(s);
-}
-const state = {}, list = document.getElementById('list');
-for (const l of D.lights) {
-  const pl = new THREE.PointLight(0xffd59a, 0, 8, 1.2); pl.position.set(m(l.x), m(l.z) - 0.25, m(l.y)); scene.add(pl);
-  const btn = document.createElement('button'); btn.className = 'light'; btn.innerHTML = '<span class="dot"></span>' + l.label + '<small>' + l.room + '</small>';
-  btn.onclick = () => set(l.id, !state[l.id].on); list.appendChild(btn);
-  // 不可见的大号点击区：灯具本身太小，点不准
-  const box3 = new THREE.Box3(); for (const me of lightMeshes[l.id]) box3.expandByObject(me);
-  const sz = box3.getSize(new THREE.Vector3()), ctr = box3.getCenter(new THREE.Vector3());
-  const hit = new THREE.Mesh(new THREE.BoxGeometry(Math.max(sz.x, 0.5) + 0.3, Math.max(sz.y, 0.5) + 0.3, Math.max(sz.z, 0.5) + 0.3), new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: false }));
-  hit.position.copy(ctr); hit.userData.lid = l.id; scene.add(hit);
-  state[l.id] = { on: false, pl, btn, meshes: lightMeshes[l.id], hit };
-}
-let night = true;
-const CUT = 1.3; let cut = false;
-function applyCut() {
-  for (const me of cutMeshes) {
-    const p = me.userData.p, z1 = m(p.z1), z2 = m(p.z2), top = cut ? Math.min(z2, CUT) : z2;
-    me.visible = top > z1 + 0.001;
-    if (me.visible) { me.scale.y = (top - z1) / (z2 - z1); me.position.y = (z1 + top) / 2; }
-  }
-  cutBtn.textContent = cut ? '完整墙' : '矮墙';
-}
-const cutBtn = document.getElementById('cut');
-cutBtn.onclick = () => { cut = !cut; applyCut(); };
-function set(id, on) {
-  const s = state[id]; s.on = on; s.btn.classList.toggle('on', on);
-  s.pl.intensity = on ? (night ? 4 : 2) : 0;
-  for (const me of s.meshes) { me.material.emissive.set(on ? 0xffc870 : 0x000000); me.material.emissiveIntensity = on ? 1.6 : 0; }
-}
-document.getElementById('all-on').onclick = () => Object.keys(state).forEach(id => set(id, true));
-document.getElementById('all-off').onclick = () => Object.keys(state).forEach(id => set(id, false));
-const nightBtn = document.getElementById('night');
-function applyNight() {
-  hemi.intensity = night ? 0.12 : 1.6; sun.intensity = night ? 0 : 1.4;
-  scene.background = new THREE.Color(night ? 0x0d0f14 : getComputedStyle(document.body).backgroundColor);
-  nightBtn.textContent = night ? '白天' : '夜间';
-  Object.keys(state).forEach(id => set(id, state[id].on));
-}
-nightBtn.onclick = () => { night = !night; applyNight(); };
-applyNight(); Object.keys(state).forEach(id => set(id, true));
-const ray = new THREE.Raycaster(), ptr = new THREE.Vector2(); let down = null;
-renderer.domElement.addEventListener('pointerdown', e => down = [e.clientX, e.clientY]);
-renderer.domElement.addEventListener('pointerup', e => {
-  if (!down || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 10) return;
-  const id = pick(e); if (id) set(id, !state[id].on);
-});
-function pick(e) {
-  ptr.set(e.clientX / innerWidth * 2 - 1, -e.clientY / innerHeight * 2 + 1); ray.setFromCamera(ptr, camera);
-  const objs = Object.values(state).flatMap(s => [...s.meshes, s.hit]);
-  return ray.intersectObjects(objs, false)[0]?.object.userData.lid;
-}
-let hoverId = null;
-renderer.domElement.addEventListener('pointermove', e => {
-  if (e.buttons) return;
-  const id = pick(e);
-  if (id === hoverId) return;
-  if (hoverId) state[hoverId].btn.style.outline = '';
-  hoverId = id; renderer.domElement.style.cursor = id ? 'pointer' : '';
-  if (id) state[id].btn.style.outline = '2px solid var(--on)';
-});
-addEventListener('resize', () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); });
-(function loop() { controls.update(); renderer.render(scene, camera); requestAnimationFrame(loop); })();
-window.__ready = true;
-</script></body></html>`;
-writeFileSync(join(OUT, 'preview.html'), html);
-console.log(`prims=${prims.length} lights=${lights.length} obj=${(obj.length / 1024).toFixed(0)}KB`);
+// ---------- 3D 页面 ----------
+// app/house.json：给 app/index.html（开发/HA 用，需 http 服务）
+// preview.html：把 app/home3d.js 和数据内联成单文件，双击就能打开（需联网加载 three.js）
+import { readFileSync, mkdirSync } from 'node:fs';
+const roomsOut = [
+  ...rooms.map(r => ({ label: r.label, at: r.at, rects: r.rects, floor: { [C.wood]: 'wood', [C.tileK]: 'tileK', [C.tileB]: 'tileB', [C.balcony]: 'balcony' }[r.color] })),
+  { label: '餐厅', at: [4400, 4300], rects: [], view: true },
+];
+const roomLabelAt = { 客厅: [4900, 9300] };
+for (const r of roomsOut) if (roomLabelAt[r.label]) r.at = roomLabelAt[r.label];
+const data = {
+  H,
+  walls: prims.filter(p => ['wall', 'glass', 'door'].includes(p.group)),
+  rooms: roomsOut, lights, devices, layout,
+};
+mkdirSync(join(OUT, 'app'), { recursive: true });
+writeFileSync(join(OUT, 'app', 'house.json'), JSON.stringify(data));
+const shell = readFileSync(join(OUT, 'app', 'index.html'), 'utf8');
+const lib = readFileSync(join(OUT, 'app', 'home3d.js'), 'utf8').replace(/^export \{[^}]*\};?\s*$/m, '');
+const boot = `${lib}\nwindow.home3d = createHome3D(document.getElementById('app'), ${JSON.stringify(data)});\n`;
+const single = shell.replace(/<script type="module" id="boot">[\s\S]*?<\/script>/, () => `<script type="module">\n${boot}</script>`);
+if (single === shell) throw new Error('index.html 里没找到 <script type="module" id="boot">');
+writeFileSync(join(OUT, 'preview.html'), single);
+console.log(`prims=${prims.length} walls=${data.walls.length} lights=${lights.length} layout=${layout.length} obj=${(obj.length / 1024).toFixed(0)}KB`);

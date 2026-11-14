@@ -4,11 +4,12 @@
 在 iPad 上有一个可交互的 3D 户型界面，点 3D 里的灯/电器就能控制真实设备；设备主要是米家生态。
 长期方案：Home Assistant（HA）+ Xiaomi Home 集成 + 3D 户型卡片（Floor3D Card 或自制卡片），iPad 当中控屏，Siri/小爱做语音。
 
-## 当前进度（2026-11-14）
+## 当前进度（2026-11-14 第二次存档）
 | 阶段 | 状态 |
 |---|---|
 | 户型 3D 模型（按户型图毫米尺寸程序生成） | ✅ 完成：`3D模型/home.obj/.mtl`，10 盏灯 + 电器均按英文名命名 |
-| 本地 3D 预览页（three.js，可点灯开关、夜间模式） | ✅ 完成：`3D模型/preview.html`（目前只是模拟，没接真实设备） |
+| 3D 中控页（仿小红书 iPad 效果，可旋转） | ✅ 完成：`3D模型/preview.html` 单文件 / `3D模型/app/`。精细家具、按房间限定的灯光、图标+控制卡片、场景、矮墙。**模拟模式**，未接真实设备 |
+| 米家现状（2026-11-14 用 adb 查看手机 REDMI K80） | 只有 1 个设备：客厅「润盛 LED 智能灯泡 Mesh2.0」，蓝牙 Mesh，**离线**；家里网络 192.168.10.x 上扫不到任何 Wi-Fi 智能设备 |
 | 酷家乐方案（墙体、门窗、42 件家具） | ✅ 已保存，方案 ID `3FO37IBJG8FL`（详见 `3D模型/说明.md`） |
 | HA Core 装在这台 Mac（Python venv） | ✅ 已安装 2026.11.0，预装 Xiaomi Home v0.5.0 + HACS 2.0.5 |
 | HA 首次向导（建管理员账号）+ 登录米家 | ❌ 未做（需要用户本人操作） |
@@ -22,20 +23,27 @@
 - **HA 先装在 Mac 上试**（Core + venv，非 Docker），验证流程后再迁移到树莓派 5 / HA Green。
 - **米家服务器区域选「中国大陆」**：设备在国内账号下。
 - **3D 联动推荐做成 HA 自定义卡片**：卡片能直接拿到 HA 的 `hass` 对象，不需要处理长期访问令牌；备选是 Floor3D Card + `home.obj`。
+- **3D 页面用 three.js 代码生成家具，不下载模型**：网络很慢（npm 15MB 要十几分钟），所以纹理（木地板、花砖、布料、藤编）也用 canvas 现场生成。
+- **灯光只照亮本房间**：每盏主灯开点光源阴影；阴影图只在状态变化时重算（`shadowMap.autoUpdate=false`），iPad 省电。墙压低显示时用看不见的全高"影子墙"继续挡光。
+- **去掉了 GTAO 环境光遮蔽**：在背景上产生暗块伪影，且 iPad 本来就不开。
+- **酷家乐不做联动载体**：CLI 没有导出模型/渲染效果图的工具，只能在它网站里看；适合出好看的鸟瞰效果图。
 
 ## 下一步待办
 1. 用户双击 `home-assistant/启动HA.command`，在 http://localhost:8123 建管理员账号
 2. 用户添加 Xiaomi Home 集成，登录小米账号，勾选灯具
-3. 把 `preview.html` 改写成 HA 自定义 Lovelace 卡片（放 `config/www/`），实体映射按 `3D模型/说明.md` 的对象名表
-4. 语音：HA 的 HomeKit Bridge 把灯暴露给苹果「家庭」→ iPhone/iPad Siri 中文控制
-5. iPad：Companion App + kiosk-mode 全屏
+3. 买蓝牙 Mesh 网关（小米中枢网关/带网关的小爱音箱），让润盛灯泡在线；或换 Wi-Fi 灯（易来）
+4. 把 `app/home3d.js` 包成 HA 自定义 Lovelace 卡片（`createHome3D` 已留 `onCommand` / `setState` 接口），实体映射按 `3D模型/说明.md` 的对象名表
+5. 语音：HA 的 HomeKit Bridge 把灯暴露给苹果「家庭」→ iPhone/iPad Siri 中文控制
+6. iPad：Companion App + kiosk-mode 全屏
 
 ## 文件地图
 | 路径 | 说明 |
 |---|---|
-| `3D模型/build.mjs` | 生成脚本：墙、门窗、地面、家具、灯具 → `home.obj`/`home.mtl`/`preview.html`。运行 `node build.mjs` |
+| `3D模型/build.mjs` | 生成脚本：墙、门窗、地面、灯具、设备、家具布局（`layout`）→ `home.obj`/`home.mtl`/`app/house.json`/`preview.html`。运行 `node build.mjs` |
 | `3D模型/home.obj`, `home.mtl` | 3D 模型（cm，Y 向上，Z 向南），给 Floor3D 用 |
-| `3D模型/preview.html` | 独立预览页（three.js 0.160，CDN 加载） |
+| `3D模型/preview.html` | 3D 中控页单文件（build.mjs 把 app/home3d.js + 数据内联生成；three.js 0.170 走 CDN） |
+| `3D模型/app/home3d.js` | 3D 中控页源码：家具/灯具生成器、灯光、墙体压低、图标、控制卡片、场景、镜头 |
+| `3D模型/app/index.html`, `app/house.json` | 拆分版页面 + build.mjs 导出的户型/布局/设备数据 |
 | `3D模型/说明.md` | 可控制对象名对照表、Floor3D 配置示例、酷家乐方案记录 |
 | `3D模型/酷家乐平面图.jpg` | 酷家乐方案的 2D 平面截图 |
 | `3D模型/.kjl/*.json`, `picks.txt` | 酷家乐 CLI 用到的墙体/门窗/家具参数与选品 ID |
@@ -48,9 +56,12 @@
 - 酷家乐：`@manycore/kjl-cli` 0.2.25（npm 全局），skill 在 `~/.claude/skills/kujiale`，专用浏览器配置 `~/.kjl/chrome-profile`
 - Home Assistant Core 2026.11.0，Python 3.14 venv：`home-assistant/.venv`（未上传，按 `使用说明.md` 重建）
 - 自定义集成（未上传）：Xiaomi Home v0.5.0（GitHub `XiaoMi/ha_xiaomi_home`）、HACS 2.0.5
-- three.js 0.160.0（jsDelivr CDN）
+- three.js 0.170.0（jsDelivr CDN）
+- adb（Android platform-tools，装在 `~/Library/Android/platform-tools`，链接到 `~/.local/bin/adb`），用于查看小米手机上的米家 App
 
 ## 未上传的本机文件
 - 房间照片：`/Users/pandaking/Desktop/房屋/IMG_9781.HEIC` ~ `IMG_9785.HEIC`（客厅、走廊/餐厅、厨房门、卧室B、卧室A；隐私）
+- 新房间照片（2026-11-14）：`/Users/pandaking/Downloads/IMG_9958.HEIC` ~ `IMG_9961.HEIC`（餐厅、客厅夜景、卧室B、餐厅看客厅）
+- 参考效果视频：`/Users/pandaking/Downloads/ScreenRecording_11-14-2026 20-35-16_1.MP4`（小红书「Jessie的新家」iPad 3D 中控）
 - 酷家乐搜索结果缓存：`3D模型/.kjl-results/`
 - HA 运行数据、账号与令牌：`home-assistant/config/.storage`、`secrets.yaml`、`*.db`、日志

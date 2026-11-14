@@ -138,11 +138,11 @@ Ks 0 0 0
 d 1
 illum 1
 
-newmtl m_6b7078_85
+newmtl m_f4f2ec_100
 Ka 0.2 0.2 0.2
-Kd 0.420 0.439 0.471
+Kd 0.957 0.949 0.925
 Ks 0 0 0
-d 0.85
+d 1
 illum 1
 
 newmtl m_7a4a2a_100
@@ -348,11 +348,11 @@ Ks 0 0 0
 d 1
 illum 1
 
-newmtl m_b8a68a_90
+newmtl m_e9e2d6_100
 Ka 0.2 0.2 0.2
-Kd 0.722 0.651 0.541
+Kd 0.914 0.886 0.839
 Ks 0 0 0
-d 0.9
+d 1
 illum 1
 
 newmtl m_d8d0c0_100
@@ -390,6 +390,13 @@ Ks 0 0 0
 d 1
 illum 1
 
+newmtl m_dddddd_100
+Ka 0.2 0.2 0.2
+Kd 0.867 0.867 0.867
+Ks 0 0 0
+d 1
+illum 1
+
 newmtl m_f7f7f2_100
 Ka 0.2 0.2 0.2
 Kd 0.969 0.969 0.949
@@ -404,9 +411,23 @@ Ks 0 0 0
 d 1
 illum 1
 
-newmtl m_2d2d2d_100
+newmtl m_bbbbbb_100
 Ka 0.2 0.2 0.2
-Kd 0.176 0.176 0.176
+Kd 0.733 0.733 0.733
+Ks 0 0 0
+d 1
+illum 1
+
+newmtl m_f0e6d2_100
+Ka 0.2 0.2 0.2
+Kd 0.941 0.902 0.824
+Ks 0 0 0
+d 1
+illum 1
+
+newmtl m_ffd7a0_100
+Ka 0.2 0.2 0.2
+Kd 1.000 0.843 0.627
 Ks 0 0 0
 d 1
 illum 1
