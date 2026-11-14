@@ -1,0 +1,24 @@
+# 隐私：房间照片
+*.HEIC
+*.heic
+
+# 凭据 / 运行数据
+home-assistant/.venv/
+home-assistant/config/.storage/
+home-assistant/config/secrets.yaml
+home-assistant/config/custom_components/
+home-assistant/config/*.db
+home-assistant/config/*.db-*
+home-assistant/config/*.log*
+home-assistant/config/.HA_VERSION
+home-assistant/config/.ha_run.lock
+home-assistant/*.log
+home-assistant/*.pid
+.env
+*.env
+
+# 缓存 / 本机配置
+3D模型/.kjl-results/
+.claude/
+.DS_Store
+node_modules/
