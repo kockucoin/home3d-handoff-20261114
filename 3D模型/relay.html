@@ -161,10 +161,11 @@ function texRadialFade() {                               // 圆形渐隐：中�
     g.fillStyle = grd; g.fillRect(0, 0, w, h);
   }, { srgb: false, repeat: false });
 }
-function texBackground(night) {
-  return TEX['bg' + night] ||= canvasTex(16, 512, (g, w, h) => {
+function texBackground(night, overcast = false) {
+  return TEX['bg' + night + overcast] ||= canvasTex(16, 512, (g, w, h) => {
     const grd = g.createLinearGradient(0, 0, 0, h);
     if (night) { grd.addColorStop(0, '#0c1222'); grd.addColorStop(1, '#1d2b3c'); }
+    else if (overcast) { grd.addColorStop(0, '#9aa6b2'); grd.addColorStop(1, '#d5dad8'); }
     else { grd.addColorStop(0, '#9fc8ea'); grd.addColorStop(1, '#e4efe2'); }
     g.fillStyle = grd; g.fillRect(0, 0, w, h);
   }, { repeat: false });
@@ -744,15 +745,53 @@ function createHome3D(container, data, opts = {}) {
     if (lamps[id]) applyLight(id); else if (blinds[id]) applyBlind(id); else applyDevice(id);
     shadowsDirty(); refreshUI();
   }
+  // ---- 天气效果：雨 / 雪粒子 + 阴天（简单、轻量） ----
+  let overcast = false, wxFx = null;
+  const FX_BOX = { x0: -2, x1: 9.5, z0: -2.5, z1: 14.5, top: 7 };
+  function setWeatherFx(cond) {
+    const kind = ['rainy', 'pouring', 'lightning-rainy'].includes(cond) ? 'rain' : ['snowy', 'snowy-rainy', 'hail'].includes(cond) ? 'snow' : null;
+    const n = cond === 'pouring' ? 1200 : kind === 'rain' ? 600 : 400;
+    overcast = ['cloudy', 'fog', 'rainy', 'pouring', 'lightning', 'lightning-rainy', 'snowy', 'snowy-rainy', 'hail'].includes(cond);
+    if (wxFx && (wxFx.kind !== kind || wxFx.n !== n)) { scene.remove(wxFx.obj); wxFx.obj.geometry.dispose(); wxFx.obj.material.dispose(); wxFx = null; }
+    if (kind && !wxFx) {
+      const B = FX_BOX, per = kind === 'rain' ? 6 : 3, pos = new Float32Array(n * per), seed = rng(9);
+      for (let i = 0; i < n; i++) {
+        const x = B.x0 + seed() * (B.x1 - B.x0), y = seed() * B.top, z = B.z0 + seed() * (B.z1 - B.z0);
+        pos.set(kind === 'rain' ? [x, y, z, x - 0.05, y - 0.42, z] : [x, y, z], i * per);
+      }
+      const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+      const obj = kind === 'rain'
+        ? new THREE.LineSegments(geo, new THREE.LineBasicMaterial({ color: '#eef6ff', transparent: true, opacity: 0.72, depthWrite: false }))
+        : new THREE.Points(geo, new THREE.PointsMaterial({ color: '#ffffff', size: 0.07, transparent: true, opacity: 0.9, depthWrite: false }));
+      obj.frustumCulled = false; scene.add(obj);
+      wxFx = { kind, n, obj, per, pos, phase: Float32Array.from({ length: n }, () => seed() * 6.28) };
+    }
+    applyDayNight();
+  }
+  function stepWeatherFx(dt) {
+    if (!wxFx) return;
+    const { kind, n, per, pos, phase } = wxFx, B = FX_BOX;
+    for (let i = 0; i < n; i++) {
+      const k = i * per;
+      if (kind === 'rain') {
+        const v = 9 * dt; pos[k + 1] -= v; pos[k + 4] -= v; pos[k] -= v * 0.12; pos[k + 3] -= v * 0.12;
+        if (pos[k + 4] < 0) { const x = B.x0 + Math.random() * (B.x1 - B.x0), y = B.top + Math.random(); pos[k] = x; pos[k + 1] = y; pos[k + 3] = x - 0.05; pos[k + 4] = y - 0.42; }
+      } else {
+        pos[k + 1] -= 0.7 * dt; pos[k] += Math.sin(phase[i] + pos[k + 1] * 1.3) * 0.15 * dt;
+        if (pos[k + 1] < 0) { pos[k] = B.x0 + Math.random() * (B.x1 - B.x0); pos[k + 1] = B.top; }
+      }
+    }
+    wxFx.obj.geometry.attributes.position.needsUpdate = true;
+  }
   let sunUp = null;                  // HA 的 sun.sun：按真实日出日落切换；没有时按 7:00–18:00
   const isNightNow = () => { if (sunUp != null) return !sunUp; const h = new Date().getHours(); return h < 7 || h >= 18; };
   function applyDayNight() {
     const h = new Date().getHours();
     night = mode === 'night' || (mode === 'auto' && isNightNow());
-    scene.background = texBackground(night);
+    scene.background = texBackground(night, overcast);
     scene.environmentIntensity = night ? 0.05 : 0.55;
     hemi.intensity = night ? 0.06 : 0.6; hemi.color.set(night ? '#5a6aa0' : '#dfe6ff');
-    sun.intensity = night ? 0 : 2.6; sun.castShadow = !night;
+    sun.intensity = night ? 0 : overcast ? 1.0 : 2.6; sun.castShadow = !night && !overcast;   // 阴天：阳光弱、没有硬阴影
     bloom.strength = night ? 0.45 : 0.2; bloom.threshold = night ? 0.8 : 0.92;
     renderer.toneMappingExposure = 1.0;
     for (const id in lamps) applyLight(id);
@@ -999,7 +1038,9 @@ function createHome3D(container, data, opts = {}) {
     if (!framed) { framed = true; overview(true); }
   }
   new ResizeObserver(resize).observe(root);
+  let lastT = 0;
   function loop(t) {
+    const dt = Math.min(0.05, (t - (lastT || t)) / 1000); lastT = t; stepWeatherFx(dt);
     if (anim) {
       const k = Math.min(1, (t - anim.t0) / anim.ms), e = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
       controls.target.lerpVectors(anim.ft, anim.tt, e); camera.position.lerpVectors(anim.fp, anim.tp, e);
@@ -1021,10 +1062,11 @@ function createHome3D(container, data, opts = {}) {
     toast,
     // 天气：{ cond: HA 天气状态（sunny/cloudy/rainy…）, temp: 气温 }；只在简洁模式顶栏显示
     setWeather(w) {
-      const el = bar.querySelector('.h3-wx'); if (!el) return;
-      if (!w || w.cond == null) { el.hidden = true; return; }
+      const el = bar.querySelector('.h3-wx');
+      if (!w || w.cond == null || ['unavailable', 'unknown'].includes(w.cond)) { if (el) el.hidden = true; setWeatherFx(null); return; }
+      setWeatherFx(w.cond);
       const ic = { sunny: '☀️', 'clear-night': '🌙', partlycloudy: '⛅', cloudy: '☁️', fog: '🌫️', rainy: '🌧️', pouring: '🌧️', 'lightning-rainy': '⛈️', lightning: '⚡', snowy: '❄️', 'snowy-rainy': '🌨️', hail: '🌨️', windy: '💨', 'windy-variant': '💨', exceptional: '⚠️' }[w.cond] || '🌡️';
-      el.innerHTML = `<i>${ic}</i>${w.temp != null ? Math.round(w.temp) + '°' : ''}`; el.hidden = false;
+      if (el) { el.innerHTML = `<i>${ic}</i>${w.temp != null ? Math.round(w.temp) + '°' : ''}`; el.hidden = false; }
     },
     setSun(up) { sunUp = !!up; if (mode === 'auto' && night !== isNightNow()) applyDayNight(); },
     setMeta(id, m) { if (!state[id]) return; meta[id] = { ...meta[id], ...m }; icons[id].style.opacity = m.unavailable ? 0.45 : ''; if (cardId === id) renderCard(); },
