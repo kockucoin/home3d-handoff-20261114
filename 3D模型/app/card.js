@@ -37,22 +37,31 @@ class Home3DCard extends HTMLElement {
 
   set hass(hass) {
     this._hass = hass;
-    if (!this._api) this._init();
-    this._sync();
+    if (!this._started) { this._started = true; this._init(); }
+    if (this._api) this._sync();
   }
 
-  _init() {
+  // 卡片外壳立即注册；3D 引擎（three.js + 户型）在后台加载，完成前显示「加载中」，避免 HA 报「配置错误」
+  async _init() {
     const root = this.attachShadow({ mode: 'open' });
     const box = document.createElement('div');
-    box.style.cssText = 'position:relative;min-height:360px;overflow:hidden';
-    root.appendChild(box);
+    box.style.cssText = 'position:relative;min-height:360px;overflow:hidden;background:linear-gradient(#1b1c2e,#3a3157)';
+    const wait = document.createElement('div');
+    wait.style.cssText = 'position:absolute;inset:0;display:grid;place-items:center;color:rgba(255,255,255,.7);font:15px -apple-system,"PingFang SC",sans-serif';
+    wait.textContent = '3D 户型加载中…';
+    box.appendChild(wait); root.appendChild(box);
     // 高度：铺满卡片下方剩余的屏幕（有没有 HA 顶栏都适用）；配置了 height 就用配置的
     const fit = () => { box.style.height = this._config.height || `${Math.max(360, window.innerHeight - box.getBoundingClientRect().top)}px`; };
     fit(); requestAnimationFrame(fit); setTimeout(fit, 500);
     window.addEventListener('resize', fit);
     this._last = {};
-    this._api = createHome3D(box, HOUSE, { simple: this._config.simple !== false, onCommand: (id, patch) => this._command(id, patch) });
+    let core;
+    try { core = await import(`/local/home3d/home3d-core.js?t=${Date.now()}`); }
+    catch (e) { wait.textContent = '3D 户型加载失败，请下拉刷新重试'; console.error(e); return; }
+    wait.remove();
+    this._api = core.createHome3D(box, core.HOUSE, { simple: this._config.simple !== false, glass: this._config.theme !== 'dark', onCommand: (id, patch) => this._command(id, patch) });
     for (const id of Object.keys(this._map)) this._api.setMeta(id, { linked: true });
+    this._sync();
   }
 
   // HA → 3D：实体状态变化时同步到模型

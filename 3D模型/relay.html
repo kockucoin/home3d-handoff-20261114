@@ -515,6 +515,19 @@ const CSS2 = `
 .h3-bar.simple .h3-more{position:absolute;top:calc(100% + 8px);right:0;width:auto;flex-direction:column;align-items:stretch;gap:4px;padding:6px;border-radius:16px;background:rgba(22,22,30,.9)}
 .h3-bar.simple .h3-more .h3-btn{text-align:left;padding:9px 14px}
 `;
+// 液态玻璃主题（仿 iOS 26）：半透明 + 背景模糊增饱和 + 顶部高光描边 + 内发光
+const CSS_GLASS = `
+.h3.glass{--g-bg:linear-gradient(140deg,rgba(255,255,255,.26),rgba(255,255,255,.07) 55%,rgba(255,255,255,.12)),rgba(16,16,26,.26);--g-bd:rgba(255,255,255,.34);--g-hi:inset 0 1px 0 rgba(255,255,255,.55),inset 0 -1px 0 rgba(255,255,255,.10),inset 0 0 24px rgba(255,255,255,.06);--g-on:linear-gradient(140deg,rgba(255,226,160,.95),rgba(255,184,92,.88))}
+.h3.glass .h3-bar,.h3.glass .h3-card,.h3.glass .h3-bar.simple .h3-more,.h3.glass .h3-toast{background:var(--g-bg);border:1px solid var(--g-bd);box-shadow:var(--g-hi),0 12px 40px rgba(0,0,0,.28);-webkit-backdrop-filter:blur(26px) saturate(190%);backdrop-filter:blur(26px) saturate(190%)}
+.h3.glass .h3-bar::before,.h3.glass .h3-card::before{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;background:radial-gradient(120% 60% at 18% -10%,rgba(255,255,255,.35),transparent 55%)}
+.h3.glass .h3-card{border-radius:30px}.h3.glass .h3-bar{border-radius:30px}
+.h3.glass .h3-ib,.h3.glass .h3-ico,.h3.glass .h3-pre button,.h3.glass .h3-head .ic,.h3.glass .h3-x,.h3.glass .h3-btn{background:linear-gradient(140deg,rgba(255,255,255,.24),rgba(255,255,255,.06));border:1px solid rgba(255,255,255,.30);box-shadow:inset 0 1px 0 rgba(255,255,255,.5),0 4px 14px rgba(0,0,0,.22);-webkit-backdrop-filter:blur(14px) saturate(170%);backdrop-filter:blur(14px) saturate(170%);color:#fff}
+.h3.glass .h3-ico{width:34px;height:34px;margin:-17px 0 0 -17px}
+.h3.glass .h3-ico.on,.h3.glass .h3-ib.on,.h3.glass .h3-pre button.on,.h3.glass .h3-head .ic.on,.h3.glass .h3-btn.on{background:var(--g-on);color:#3a2400;border-color:rgba(255,240,200,.9);box-shadow:inset 0 1px 0 rgba(255,255,255,.8),0 0 22px rgba(255,190,90,.55)}
+.h3.glass input[type=range].h3-r{box-shadow:inset 0 1px 2px rgba(0,0,0,.25),inset 0 0 0 1px rgba(255,255,255,.18)}
+.h3.glass input[type=range].h3-r::-webkit-slider-thumb{background:linear-gradient(#fff,#eef0f4);box-shadow:0 2px 8px rgba(0,0,0,.35),inset 0 1px 0 #fff}
+.h3.glass .h3-clock b,.h3.glass .h3-sum,.h3.glass .h3-head .t{text-shadow:0 1px 6px rgba(0,0,0,.25)}
+`;
 const ICON = {
   light: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a7 7 0 0 0-4 12.7V17a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-2.3A7 7 0 0 0 12 2zm-3 18h6v1a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1v-1z"/></svg>',
   blind: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 4h18M5 4v16M19 4v16M8 8h8M8 12h8M8 16h8"/></svg>',
@@ -539,8 +552,8 @@ const PRESETS = [
 function createHome3D(container, data, opts = {}) {
   // 样式放进容器所在的根（HA 卡片在 shadow DOM 里，document.head 的样式进不去）
   const styleHost = container.getRootNode() instanceof ShadowRoot ? container.getRootNode() : document.head;
-  if (!styleHost.querySelector('#h3-style')) { const s = document.createElement('style'); s.id = 'h3-style'; s.textContent = CSS + CSS2; styleHost.appendChild(s); }
-  const root = document.createElement('div'); root.className = 'h3'; container.appendChild(root);
+  if (!styleHost.querySelector('#h3-style')) { const s = document.createElement('style'); s.id = 'h3-style'; s.textContent = CSS + CSS2 + CSS_GLASS; styleHost.appendChild(s); }
+  const root = document.createElement('div'); root.className = 'h3' + (opts.glass ? ' glass' : ''); container.appendChild(root);
   const touch = matchMedia('(pointer: coarse)').matches;
   const W = () => root.clientWidth, Hh = () => root.clientHeight;
 

@@ -353,24 +353,39 @@ mkdirSync(join(OUT, 'app'), { recursive: true });
 writeFileSync(join(OUT, 'app', 'house.json'), JSON.stringify(data));
 const shell = readFileSync(join(OUT, 'app', 'index.html'), 'utf8');
 const lib = readFileSync(join(OUT, 'app', 'home3d.js'), 'utf8').replace(/^export \{[^}]*\};?\s*$/m, '');
-const boot = `${lib}\nwindow.home3d = createHome3D(document.getElementById('app'), ${JSON.stringify(data)}, { simple: /simple/.test(location.search) });\n`;
+const boot = `${lib}\nwindow.home3d = createHome3D(document.getElementById('app'), ${JSON.stringify(data)}, { simple: /simple/.test(location.search), glass: /glass/.test(location.search) });\n`;
 const single = shell.replace(/<script type="module" id="boot">[\s\S]*?<\/script>/, () => `<script type="module">\n${boot}</script>`);
 if (single === shell) throw new Error('index.html 里没找到 <script type="module" id="boot">');
 writeFileSync(join(OUT, 'preview.html'), single);
 console.log(`prims=${prims.length} walls=${data.walls.length} lights=${lights.length} layout=${layout.length} obj=${(obj.length / 1024).toFixed(0)}KB`);
 
 // ---------- Home Assistant 卡片：app/home3d-card.js（同时复制到 HA 的 config/www/home3d/） ----------
-// HA 页面没有 import map，所以把 three 的裸模块名改成 jsDelivr 的 +esm 完整地址（插件内部引用会指向同一个 three）
+// HA 页面没有 import map：three.js 由 HA 自己提供（/local/home3d/vendor，不依赖海外 CDN），
+// 3D 引擎 + 户型数据放 home3d-core.js（后台加载），home3d-card.js 只是很小的卡片外壳（立即注册，避免「配置错误」）
 const THREE_V = '0.170.0';
-const cardLib = lib
-  .replace(/from 'three';/g, `from 'https://cdn.jsdelivr.net/npm/three@${THREE_V}/+esm';`)
-  .replace(/from 'three\/addons\/([^']+)';/g, (_, f) => `from 'https://cdn.jsdelivr.net/npm/three@${THREE_V}/examples/jsm/${f}/+esm';`);
-const cardSrc = `${cardLib}\nconst HOUSE = ${JSON.stringify(data)};\n${readFileSync(join(OUT, 'app', 'card.js'), 'utf8')}`;
+const VENDOR = '/local/home3d/vendor';
+const coreLib = lib
+  .replace(/from 'three';/g, `from '${VENDOR}/build/three.module.js';`)
+  .replace(/from 'three\/addons\/([^']+)';/g, (_, f) => `from '${VENDOR}/examples/jsm/${f}';`);
+const coreSrc = `${coreLib}\nconst HOUSE = ${JSON.stringify(data)};\nexport { createHome3D, HOUSE };\n`;
+const cardSrc = readFileSync(join(OUT, 'app', 'card.js'), 'utf8');
 writeFileSync(join(OUT, 'app', 'home3d-card.js'), cardSrc);
 const haWww = join(OUT, '..', 'home-assistant', 'config', 'www', 'home3d');
 mkdirSync(haWww, { recursive: true });
 writeFileSync(join(haWww, 'home3d-card.js'), cardSrc);
-console.log(`card → ${haWww}/home3d-card.js (${(cardSrc.length / 1024).toFixed(0)}KB)`);
+writeFileSync(join(haWww, 'home3d-core.js'), coreSrc);
+// 复制 three.js 到 HA：插件里的裸模块名 'three' 改成完整路径
+import { readdirSync, statSync } from 'node:fs';
+const copyVendor = (src, dst) => {
+  mkdirSync(dst, { recursive: true });
+  for (const n of readdirSync(src)) {
+    const a = join(src, n), b = join(dst, n);
+    if (statSync(a).isDirectory()) copyVendor(a, b);
+    else writeFileSync(b, readFileSync(a, 'utf8').replace(/from ['"]three['"]/g, `from '${VENDOR}/build/three.module.js'`));
+  }
+};
+copyVendor(join(OUT, 'app', 'vendor'), join(haWww, 'vendor'));
+console.log(`card → ${haWww}: 外壳 ${(cardSrc.length / 1024).toFixed(0)}KB + 引擎 ${(coreSrc.length / 1024).toFixed(0)}KB + three.js 本地`);
 
 // ---------- 米家手机中转版：relay.html（由 relay/server.mjs 提供，点 3D 里的灯 → 手机米家开/关） ----------
 const relayBoot = `${lib}
