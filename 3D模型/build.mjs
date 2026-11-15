@@ -353,7 +353,7 @@ mkdirSync(join(OUT, 'app'), { recursive: true });
 writeFileSync(join(OUT, 'app', 'house.json'), JSON.stringify(data));
 const shell = readFileSync(join(OUT, 'app', 'index.html'), 'utf8');
 const lib = readFileSync(join(OUT, 'app', 'home3d.js'), 'utf8').replace(/^export \{[^}]*\};?\s*$/m, '');
-const boot = `${lib}\nwindow.home3d = createHome3D(document.getElementById('app'), ${JSON.stringify(data)});\n`;
+const boot = `${lib}\nwindow.home3d = createHome3D(document.getElementById('app'), ${JSON.stringify(data)}, { simple: /simple/.test(location.search) });\n`;
 const single = shell.replace(/<script type="module" id="boot">[\s\S]*?<\/script>/, () => `<script type="module">\n${boot}</script>`);
 if (single === shell) throw new Error('index.html 里没找到 <script type="module" id="boot">');
 writeFileSync(join(OUT, 'preview.html'), single);

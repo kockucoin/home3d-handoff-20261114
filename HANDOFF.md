@@ -28,6 +28,15 @@
 - 亮度/色温滑条：模拟拖动不可靠（会过冲、卡在 100%），情景模式按钮结果也不稳定 → 3D 页面初版只开放开/关；`setLevel`/`setScene` 代码保留在 relay/server.mjs 里但页面未启用。精确调节等网关（小爱音箱 Pro 带蓝牙 Mesh 网关即可）后走 HA。
 - 下一步候选：买小米中枢网关 / 多模网关 2（推荐）；或做 Android App（无障碍服务操作米家，免数据线、读屏更快）。
 
+
+## 2026-11-15 晚：小爱音箱 Pro 网关上线，HA 直接控制已通
+- 小爱音箱 Pro（米家名「Xiaomi 智能音箱 Pro」）需在 米家→音箱→设置→更多设置→蓝牙网关 里打开「蓝牙Mesh网关」（默认关）；打开后 3 盏灯在线。HA 里需要「重新加载 Xiaomi Home 集成」才刷新在线状态。
+- 实测对应（已改 home3d-dashboard.yaml）：客厅灯笼 ← V8 智能色温灯（Mesh），餐厅吊灯 ← 润盛灯泡，卧室B ← V8 2。
+- 手机：已装 HA 官方 Android App（2026.11.1 minimal，GitHub 官方 release，SHA-256 与 GitHub digest 一致，签名 O=Home Assistant）。旧的手机中转（relay，8795）已停用。
+- 3D 卡片（简洁模式默认开，`simple: false` 恢复完整）：只显示已接入设备；点灯/点房间开关；按住灯或房间 → 底部卡片（亮度、色温、4 个预设：明亮/阅读/温馨/夜灯），画面自动上移不被遮挡；顶栏仿参考视频的胶囊样式；白天/夜晚跟随 sun.sun。
+- kiosk-mode v15.0.0（用户同意）放在 config/www/home3d/，由卡片自己 import（loader.js 会被缓存 31 天，所以不靠它）；dashboard yaml 的 kiosk_mode 在 ≤900px 宽隐藏 HA 顶栏/侧边栏。用户手机上是否生效待确认。
+- 安卓工具：~/Library/Android/Android-Dev-Mac-AppleSilicon（只解压了 jbr/android-35/build-tools 35/platform-tools，0.46GB；放「文稿」会触发隐私弹窗，已移出）。
+
 ## 关键决定与原因
 - **不用 Sweet Home 3D**：用户在里面画户型失败；改为脚本 `build.mjs` 按户型图尺寸直接生成模型，可复现、可改。
 - **酷家乐网页设计工具很慢**：用户在美国（PST），访问国内酷家乐首页约 20 秒；与代理无关。酷家乐仅用于出方案，不作为 HA 联动的载体。

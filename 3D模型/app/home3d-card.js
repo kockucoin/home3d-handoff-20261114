@@ -452,6 +452,10 @@ const CSS = `
 .h3-btns{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}
 .h3-btn{border:0;border-radius:11px;padding:7px 11px;background:rgba(255,255,255,.12);color:#fff;font:inherit;font-size:13px;cursor:pointer;white-space:nowrap}
 .h3-btn:active{transform:scale(.96)}.h3-btn.on{background:#f5b84a;color:#2a1d05}
+.h3-more{width:100%;justify-content:center}.h3-more[hidden]{display:none}
+.h3-ico{-webkit-touch-callout:none;touch-action:manipulation}
+.h3-ico.flash{animation:h3f .5s}@keyframes h3f{0%{transform:scale(1.5)}100%{transform:scale(1)}}
+.h3-hint{transition:opacity 1s}
 .h3-layer{position:absolute;inset:0;pointer-events:none}
 .h3-ico{position:absolute;left:0;top:0;width:30px;height:30px;margin:-15px 0 0 -15px;border-radius:50%;border:0;padding:0;display:grid;place-items:center;background:rgba(30,30,38,.78);color:#fff;pointer-events:auto;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.35);transition:background .2s,color .2s,box-shadow .2s}
 .h3-ico svg{width:17px;height:17px}
@@ -473,21 +477,55 @@ const CSS = `
 .h3-toast{position:absolute;left:50%;bottom:max(70px,env(safe-area-inset-bottom));transform:translateX(-50%);padding:10px 16px;border-radius:12px;background:rgba(200,50,50,.92);color:#fff;font-size:14px;pointer-events:none;opacity:0;transition:opacity .3s;max-width:80%;text-align:center}
 .h3-toast.show{opacity:1}
 .h3-hint{position:absolute;left:16px;bottom:max(14px,env(safe-area-inset-bottom));font-size:12px;opacity:.6;pointer-events:none}
-@media (max-width:640px){.h3-card{left:10px;right:10px;width:auto}.h3-hint{display:none}.h3-clock b{font-size:18px}}
+@media (max-width:640px){.h3-hint{display:none}.h3-clock b{font-size:18px}}
+`;
+const CSS2 = `
+.h3-card{left:50%;right:auto;bottom:max(10px,env(safe-area-inset-bottom));transform:translateX(-50%);width:min(520px,calc(100% - 16px));padding:12px 14px 14px;border-radius:22px;background:rgba(22,22,30,.84);box-shadow:0 10px 40px rgba(0,0,0,.45);animation:h3up .22s ease-out}
+@keyframes h3up{from{opacity:0;transform:translate(-50%,24px)}to{opacity:1;transform:translate(-50%,0)}}
+.h3-head{display:flex;align-items:center;gap:10px}
+.h3-head .ic{width:38px;height:38px;border-radius:50%;border:0;display:grid;place-items:center;background:rgba(255,255,255,.12);color:#fff;flex:none;cursor:pointer}
+.h3-head .ic svg{width:20px;height:20px}.h3-head .ic.on{background:#ffd27a;color:#3a2600;box-shadow:0 0 16px rgba(255,200,100,.6)}
+.h3-head .t{flex:1;min-width:0;line-height:1.3}.h3-head .t b{font-size:15px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.h3-head .t small{opacity:.6;font-size:12px}
+.h3-head .h3-x{position:static;flex:none}
+.h3-lab{display:flex;justify-content:space-between;font-size:12px;opacity:.75;margin:12px 2px 5px}
+.h3 input[type=range].h3-r{-webkit-appearance:none;appearance:none;width:100%;height:30px;border-radius:15px;margin:0;outline:none;background:var(--trk);touch-action:pan-x}
+.h3 input[type=range].h3-r::-webkit-slider-thumb{-webkit-appearance:none;width:26px;height:26px;border-radius:50%;background:#fff;box-shadow:0 1px 5px rgba(0,0,0,.45)}
+.h3 input[type=range].h3-r::-moz-range-thumb{width:26px;height:26px;border:0;border-radius:50%;background:#fff}
+.h3-pre{display:flex;gap:6px;margin-top:12px}.h3-pre button{flex:1;border:0;border-radius:12px;padding:7px 0 6px;background:rgba(255,255,255,.1);color:#fff;font:inherit;font-size:13px;cursor:pointer;line-height:1.2}
+.h3-pre button i{display:block;font-style:normal;font-size:10px;opacity:.55;margin-top:2px}.h3-pre button.on{background:#ffd27a;color:#3a2600}.h3-pre button.on i{opacity:.8}
+.h3-bar.simple .h3-clock small{white-space:nowrap}
+.h3-bar.simple{gap:10px;padding:7px 7px 7px 16px;border-radius:26px;flex-wrap:nowrap}
+.h3-sep{width:1px;height:26px;background:rgba(255,255,255,.18);flex:none}
+.h3-ib{width:36px;height:36px;border-radius:50%;border:0;display:grid;place-items:center;background:rgba(255,255,255,.12);color:#fff;cursor:pointer;flex:none;padding:0}
+.h3-ib svg{width:18px;height:18px}.h3-ib.on{background:#ffd27a;color:#3a2600}
+.h3-bar.simple .h3-more{position:absolute;top:calc(100% + 8px);right:0;width:auto;flex-direction:column;align-items:stretch;gap:4px;padding:6px;border-radius:16px;background:rgba(22,22,30,.9)}
+.h3-bar.simple .h3-more .h3-btn{text-align:left;padding:9px 14px}
 `;
 const ICON = {
   light: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a7 7 0 0 0-4 12.7V17a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-2.3A7 7 0 0 0 12 2zm-3 18h6v1a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1v-1z"/></svg>',
   blind: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 4h18M5 4v16M19 4v16M8 8h8M8 12h8M8 16h8"/></svg>',
   ac: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="5" width="18" height="8" rx="2"/><path d="M7 17l-1 3M12 17v3M17 17l1 3"/></svg>',
   tv: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="5" width="18" height="12" rx="2"/><path d="M8 21h8"/></svg>',
+  sun: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>',
+  moon: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>',
+  power: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 3v8"/><path d="M6.3 6.3a8 8 0 1 0 11.4 0"/></svg>',
+  dots: '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>',
   door: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 21V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v17M3 21h18"/><circle cx="14.5" cy="12" r="1" fill="currentColor"/></svg>',
 };
+
+// 灯的常用效果（用亮度 + 色温实现，HA 能精确设置；色温会按灯的实际范围收窄）
+const PRESETS = [
+  { k: '明亮', b: 100, ct: 5000 },
+  { k: '阅读', b: 80, ct: 4300 },
+  { k: '温馨', b: 45, ct: 2900 },
+  { k: '夜灯', b: 8, ct: 2700 },
+];
 
 // ================= 主函数 =================
 function createHome3D(container, data, opts = {}) {
   // 样式放进容器所在的根（HA 卡片在 shadow DOM 里，document.head 的样式进不去）
   const styleHost = container.getRootNode() instanceof ShadowRoot ? container.getRootNode() : document.head;
-  if (!styleHost.querySelector('#h3-style')) { const s = document.createElement('style'); s.id = 'h3-style'; s.textContent = CSS; styleHost.appendChild(s); }
+  if (!styleHost.querySelector('#h3-style')) { const s = document.createElement('style'); s.id = 'h3-style'; s.textContent = CSS + CSS2; styleHost.appendChild(s); }
   const root = document.createElement('div'); root.className = 'h3'; container.appendChild(root);
   const touch = matchMedia('(pointer: coarse)').matches;
   const W = () => root.clientWidth, Hh = () => root.clientHeight;
@@ -646,9 +684,11 @@ function createHome3D(container, data, opts = {}) {
     if (lamps[id]) applyLight(id); else if (blinds[id]) applyBlind(id); else applyDevice(id);
     shadowsDirty(); refreshUI();
   }
+  let sunUp = null;                  // HA 的 sun.sun：按真实日出日落切换；没有时按 7:00–18:00
+  const isNightNow = () => { if (sunUp != null) return !sunUp; const h = new Date().getHours(); return h < 7 || h >= 18; };
   function applyDayNight() {
     const h = new Date().getHours();
-    night = mode === 'night' || (mode === 'auto' && (h < 7 || h >= 18));
+    night = mode === 'night' || (mode === 'auto' && isNightNow());
     scene.background = texBackground(night);
     scene.environmentIntensity = night ? 0.05 : 0.55;
     hemi.intensity = night ? 0.06 : 0.6; hemi.color.set(night ? '#5a6aa0' : '#dfe6ff');
@@ -662,16 +702,36 @@ function createHome3D(container, data, opts = {}) {
   // ---- 界面 ----
   const layer = document.createElement('div'); layer.className = 'h3-layer'; root.appendChild(layer);
   const bar = document.createElement('div'); bar.className = 'h3-bar'; layer.appendChild(bar); bar.style.pointerEvents = 'auto';
-  bar.innerHTML = `<div class="h3-clock"><b></b><small></small></div><div class="h3-sum"></div>
+  const simple = !!opts.simple;      // 简洁模式：只显示已接入的设备，按钮收进「⋯」
+  const hiddenIcon = id => simple && !meta[id]?.linked;   // 简洁模式下只显示已接入（linked）的设备
+  if (simple) bar.classList.add('simple');
+  bar.innerHTML = simple
+    ? `<div class="h3-clock"><b></b><small></small></div><div class="h3-sep"></div>
+       <button class="h3-ib" data-a="day"></button><div class="h3-sum"></div>
+       <button class="h3-ib" data-a="alloff" title="全部关灯" aria-label="全部关灯">${ICON.power}</button>
+       <button class="h3-ib" data-a="more" title="更多" aria-label="更多">${ICON.dots}</button>
+       <div class="h3-btns h3-more" hidden><button class="h3-btn" data-a="allon">全部开灯</button><button class="h3-btn" data-a="cut">矮墙看全屋</button><button class="h3-btn" data-a="home">回到总览</button></div>`
+    : `<div class="h3-clock"><b></b><small></small></div><div class="h3-sum"></div>
     <div class="h3-btns"><button class="h3-btn" data-a="allon">全开</button><button class="h3-btn" data-a="alloff">全关</button><button class="h3-btn" data-a="movie">观影</button><button class="h3-btn" data-a="sleep">晚安</button><button class="h3-btn" data-a="cut">矮墙</button><button class="h3-btn" data-a="day">自动</button><button class="h3-btn" data-a="home">总览</button></div>`;
-  const hint = document.createElement('div'); hint.className = 'h3-hint'; hint.textContent = '拖动旋转 · 滚轮/双指缩放 · 右键/双指平移 · 双击房间放大'; layer.appendChild(hint);
+  const hint = document.createElement('div'); hint.className = 'h3-hint'; hint.textContent = '点灯或房间：开/关 · 按住灯或房间：调亮度色温 · 双击：放大'; layer.appendChild(hint);
+  setTimeout(() => { hint.style.opacity = 0; }, 8000);
   const icons = {};
   for (const e of entities) {
     const b = document.createElement('button'); b.className = 'h3-ico'; b.innerHTML = ICON[e.type]; b.title = e.label;
-    b.onclick = ev => { ev.stopPropagation(); openCard(e.id); };
+    // 灯：点一下开/关，长按（或右键）打开卡片调亮度色温；其他设备：点一下打开卡片
+    let lpT = null, lpFired = false;
+    b.addEventListener('pointerdown', ev => { ev.stopPropagation(); lpFired = false; clearTimeout(lpT); lpT = setTimeout(() => { lpFired = true; openCard(e.id); }, 450); });
+    b.addEventListener('pointerup', ev => {
+      ev.stopPropagation(); clearTimeout(lpT); if (lpFired) return;
+      if (e.type === 'light') { command(e.id, { on: !state[e.id].on }); b.classList.remove('flash'); void b.offsetWidth; b.classList.add('flash'); }
+      else openCard(e.id);
+    });
+    b.addEventListener('pointerleave', () => clearTimeout(lpT));
+    b.addEventListener('contextmenu', ev => { ev.preventDefault(); clearTimeout(lpT); lpFired = true; openCard(e.id); });
+    b.onclick = ev => ev.stopPropagation();
     layer.appendChild(b); icons[e.id] = b;
   }
-  const roomChips = data.rooms.map(r => {
+  const roomChips = simple ? [] : data.rooms.map(r => {
     const b = document.createElement('button'); b.className = 'h3-room'; b.textContent = r.label; layer.appendChild(b);
     b.onclick = () => flyTo(r.label);
     return { b, pos: P(r.at[0], r.at[1], 30) };
@@ -686,17 +746,51 @@ function createHome3D(container, data, opts = {}) {
     opts.onCommand?.(id, { ...patch });
     if (cardId === id) renderCard();
   }
-  function openCard(id) { cardId = id; renderCard(); card.hidden = false; refreshUI(); }
+  function openCard(id) {
+    cardId = id; renderCard(); card.hidden = false; refreshUI();
+    // 底部卡片挡住了这盏灯所在的位置时，把画面往上推，让灯露在卡片上方
+    requestAnimationFrame(() => {
+      const e = entities.find(x => x.id === id); if (!e) return;
+      const v = e.anchor.clone().project(camera), y = ((1 - v.y) / 2) * Hh();
+      const limit = card.getBoundingClientRect().top - root.getBoundingClientRect().top - 70;
+      if (y <= limit) return;
+      const dist = camera.position.distanceTo(controls.target), perPx = (2 * dist * Math.tan((camera.fov * DEG) / 2)) / Hh();
+      const fwd = new THREE.Vector3(); camera.getWorldDirection(fwd); fwd.y = 0; if (fwd.lengthSq() < 1e-6) camera.up.clone(); fwd.normalize();
+      const up = new THREE.Vector3(0, 1, 0).applyQuaternion(camera.quaternion); up.y = 0; const dir = up.lengthSq() > 1e-6 ? up.normalize() : fwd;
+      const shift = dir.multiplyScalar(-(y - limit) * perPx * 1.15);   // 画面内容上移 = 镜头往"屏幕下方"方向挪
+      animateTo(controls.target.clone().add(shift), camera.position.clone().add(shift), 450);
+    });
+  }
   function closeCard() { cardId = null; card.hidden = true; refreshUI(); }
+  function renderLightSheet(e, s, mt) {
+    const minK = mt.minK || 2700, maxK = mt.maxK || 6500, clampK = k => Math.min(maxK, Math.max(minK, k));
+    const status = mt.unavailable ? '设备离线' : mt.busy ? '切换中…' : s.on ? `已开启 · ${s.brightness}% · ${s.ct}K` : '已关闭';
+    const pre = PRESETS.map((p, i) => `<button data-preset="${i}" class="${s.on && Math.abs(s.brightness - p.b) <= 3 && Math.abs(s.ct - clampK(p.ct)) <= 150 ? 'on' : ''}">${p.k}<i>${p.b}%</i></button>`).join('');
+    card.innerHTML = `<div class="h3-head"><button class="ic ${s.on ? 'on' : ''}" data-k="on" aria-label="开关" ${mt.busy ? 'disabled' : ''}>${ICON.light}</button>
+      <div class="t"><b>${e.label}</b><small>${e.room} · ${status}${mt.linked ? '' : '（模拟）'}</small></div><button class="h3-x" aria-label="收起">×</button></div>
+      ${mt.onOffOnly ? '' : `<div class="h3-lab"><span>亮度</span><span data-v="brightness">${s.brightness}%</span></div>
+      <input type="range" class="h3-r" data-k="brightness" min="1" max="100" value="${s.brightness}" style="--trk:linear-gradient(90deg,#ffd27a ${s.brightness}%,rgba(255,255,255,.14) ${s.brightness}%)">
+      <div class="h3-lab"><span>色温</span><span data-v="ct">${s.ct}K</span></div>
+      <input type="range" class="h3-r" data-k="ct" min="${minK}" max="${maxK}" step="100" value="${clampK(s.ct)}" style="--trk:linear-gradient(90deg,#ff9f43,#ffe6c4 50%,#dcebff)">
+      <div class="h3-pre">${pre}</div>`}`;
+    card.querySelector('.h3-x').onclick = closeCard;
+    card.querySelector('[data-k=on]').onclick = () => command(cardId, { on: !state[cardId].on });
+    card.querySelectorAll('input.h3-r').forEach(r => {
+      r.oninput = () => {
+        const k = r.dataset.k, v = +r.value;
+        state[cardId][k] = v; state[cardId].on = true; apply(cardId);
+        card.querySelector(`[data-v=${k}]`).textContent = k === 'brightness' ? `${v}%` : `${v}K`;
+        if (k === 'brightness') r.style.setProperty('--trk', `linear-gradient(90deg,#ffd27a ${v}%,rgba(255,255,255,.14) ${v}%)`);
+      };
+      r.onchange = () => command(cardId, { [r.dataset.k]: +r.value, on: true });
+    });
+    card.querySelectorAll('[data-preset]').forEach(b => b.onclick = () => { const p = PRESETS[+b.dataset.preset]; command(cardId, { on: true, brightness: p.b, ct: clampK(p.ct) }); });
+  }
   function renderCard() {
     const e = entities.find(x => x.id === cardId), s = state[cardId], mt = meta[cardId] || {};
+    if (e.type === 'light') return renderLightSheet(e, s, mt);
     let body = '';
-    if (e.type === 'light') body = `
-      <div class="h3-row"><label>开关</label><button class="h3-sw ${s.on ? 'on' : ''}" data-k="on" ${mt.busy ? 'disabled style="opacity:.5"' : ''}></button></div>
-      ${mt.onOffOnly ? '<div class="sub">初版只支持开 / 关；亮度和色温请在米家 App 里调</div>' : `<div class="h3-row"><label>亮度 ${s.brightness}%</label></div><input type="range" min="1" max="100" value="${s.brightness}" data-k="brightness">
-      <div class="h3-row"><label>色温 ${s.ct}K</label></div><input type="range" min="${mt.minK || 2700}" max="${mt.maxK || 6500}" step="100" value="${s.ct}" data-k="ct">
-      ${mt.effects?.length ? `<div class="h3-row"><label>情景模式</label></div><div class="h3-seg" style="flex-wrap:wrap">${mt.effects.map(f => `<button class="h3-btn ${s.effect === f ? 'on' : ''}" data-set="effect:${f}" style="flex:0 0 calc(25% - 5px)">${f}</button>`).join('')}</div>` : ''}`}`;
-    else if (e.type === 'blind') body = `
+    if (e.type === 'blind') body = `
       <div class="h3-row"><label>打开 ${s.position}%</label></div><input type="range" min="0" max="100" value="${s.position}" data-k="position">
       <div class="h3-seg"><button class="h3-btn" data-set="position:0">关闭</button><button class="h3-btn" data-set="position:50">一半</button><button class="h3-btn" data-set="position:100">打开</button></div>`;
     else if (e.type === 'ac') body = `
@@ -720,9 +814,11 @@ function createHome3D(container, data, opts = {}) {
       const s = state[e.id], on = e.type === 'blind' ? s.position > 0 : e.type === 'door' ? false : !!s.on;
       icons[e.id].classList.toggle('on', on); icons[e.id].classList.toggle('sel', cardId === e.id);
     }
-    const n = data.lights.filter(l => state[l.id].on).length;
+    const n = data.lights.filter(l => state[l.id].on && !hiddenIcon(l.id)).length;
     bar.querySelector('.h3-sum').textContent = n ? `${n} 盏灯亮着` : '灯都关了';
-    bar.querySelector('[data-a=day]').textContent = { auto: night ? '自动·夜' : '自动·昼', day: '白天', night: '夜晚' }[mode];
+    const db = bar.querySelector('[data-a=day]');
+    if (simple) { db.innerHTML = night ? ICON.moon : ICON.sun; db.title = { auto: '自动：按日出日落', day: '固定白天', night: '固定夜晚' }[mode] + '（点击切换）'; db.classList.toggle('on', mode !== 'auto'); }
+    else db.textContent = { auto: night ? '自动·夜' : '自动·昼', day: '白天', night: '夜晚' }[mode];
   }
   const scenes = {
     allon: () => data.lights.forEach(l => command(l.id, { on: true, brightness: 80 })),
@@ -731,14 +827,15 @@ function createHome3D(container, data, opts = {}) {
     sleep: () => { data.lights.forEach(l => command(l.id, { on: l.id === 'bedroom_b_ceiling_light', brightness: 15, ct: 2700 })); command('living_tv', { on: false }); command('bedroom_b_curtain', { position: 0 }); },
     day: () => { mode = { auto: 'day', day: 'night', night: 'auto' }[mode]; applyDayNight(); },
     home: () => overview(),
+    more: () => { const m = bar.querySelector('.h3-more'); m.hidden = !m.hidden; },
     cut: () => { cutAll = !cutAll; bar.querySelector('[data-a=cut]').classList.toggle('on', cutAll); },
   };
   bar.querySelectorAll('[data-a]').forEach(b => b.onclick = () => scenes[b.dataset.a]());
   function tick() {
     const d = new Date();
     bar.querySelector('.h3-clock b').textContent = d.toTimeString().slice(0, 5);
-    bar.querySelector('.h3-clock small').textContent = `${d.getMonth() + 1}月${d.getDate()}日 星期${'日一二三四五六'[d.getDay()]}`;
-    if (mode === 'auto') { const was = night; const h = d.getHours(); if (was !== (h < 7 || h >= 18)) applyDayNight(); }
+    bar.querySelector('.h3-clock small').textContent = simple ? `${d.getMonth() + 1}/${d.getDate()} 周${'日一二三四五六'[d.getDay()]}` : `${d.getMonth() + 1}月${d.getDate()}日 星期${'日一二三四五六'[d.getDay()]}`;
+    if (mode === 'auto' && night !== isNightNow()) applyDayNight();
   }
   tick(); setInterval(tick, 15000);
 
@@ -786,20 +883,44 @@ function createHome3D(container, data, opts = {}) {
     }
   }
 
+  // 点房间：开/关这个房间里离点击处最近的主灯（餐厅属于客厅这块地面）
+  function roomLamp(room, pt) {
+    const cand = data.lights.filter(l => (l.room === room || (room === '客厅' && l.room === '餐厅')) && !hiddenIcon(l.id) && !['floor', 'mushroom'].includes(l.shape));
+    if (!cand.length) { if (simple) toast('这个房间还没有接入灯'); return null; }
+    return cand.reduce((a, l) => { const d = Math.hypot(M(l.x) - pt.x, M(l.y) - pt.z); return d < a.d ? { l, d } : a; }, { l: null, d: Infinity }).l.id;
+  }
+  const flashIcon = id => { const ic = icons[id]; ic.classList.remove('flash'); void ic.offsetWidth; ic.classList.add('flash'); };
+  function roomTap(room, pt) { const id = roomLamp(room, pt); if (id) { command(id, { on: !state[id].on }); flashIcon(id); } }
+
   // ---- 点击 / 双击 ----
   const ray = new THREE.Raycaster(), ptr = new THREE.Vector2();
   const hitTargets = Object.values(lamps).flatMap(L => [L.hit, ...L.g.children]);
   function pickAt(ev, objs) { const r = renderer.domElement.getBoundingClientRect(); ptr.set(((ev.clientX - r.left) / r.width) * 2 - 1, -((ev.clientY - r.top) / r.height) * 2 + 1); ray.setFromCamera(ptr, camera); return ray.intersectObjects(objs, false)[0]; }
-  let down = null, lastTap = 0;
-  renderer.domElement.addEventListener('pointerdown', e => { down = [e.clientX, e.clientY]; anim = null; });
+  let down = null, downT = 0, lastTap = 0, tapT = null, lpT = null, lpFired = false;
+  // 按住灯或房间 0.45 秒：底部弹出这盏灯的亮度色温卡片
+  function lightAt(x, y) {
+    const ev = { clientX: x, clientY: y };
+    const h = pickAt(ev, hitTargets); if (h && !hiddenIcon(h.object.userData.lid)) return h.object.userData.lid;
+    const f = pickAt(ev, floors); return f ? roomLamp(f.object.userData.room, f.point) : null;
+  }
+  renderer.domElement.addEventListener('pointerdown', e => {
+    down = [e.clientX, e.clientY]; downT = performance.now(); anim = null; lpFired = false; clearTimeout(lpT);
+    lpT = setTimeout(() => { if (!down) return; const id = lightAt(down[0], down[1]); if (id) { lpFired = true; openCard(id); flashIcon(id); } }, 450);
+  });
+  renderer.domElement.addEventListener('pointermove', e => { if (down && Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 10) clearTimeout(lpT); });
+  renderer.domElement.addEventListener('pointercancel', () => { clearTimeout(lpT); down = null; });
   renderer.domElement.addEventListener('pointerup', e => {
-    if (!down || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 8) return;
+    clearTimeout(lpT);
+    if (lpFired) { lpFired = false; down = null; return; }
+    if (!down || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > (touch ? 14 : 8) || performance.now() - downT > 500) return;
     const now = performance.now();
-    if (now - lastTap < 320) { const f = pickAt(e, floors); if (f) flyTo(f.object.userData.room); lastTap = 0; return; }
+    if (now - lastTap < 320) { clearTimeout(tapT); const f = pickAt(e, floors); if (f) flyTo(f.object.userData.room); lastTap = 0; return; }
     lastTap = now;
+    if (!card.hidden) { closeCard(); return; }
     const h = pickAt(e, hitTargets);
-    if (h) { const id = h.object.userData.lid; command(id, { on: !state[id].on }); }
-    else if (!card.hidden) closeCard();
+    if (h && !hiddenIcon(h.object.userData.lid)) { const id = h.object.userData.lid; command(id, { on: !state[id].on }); return; }
+    const f = pickAt(e, floors);
+    if (f) { const room = f.object.userData.room, pt = f.point.clone(); clearTimeout(tapT); tapT = setTimeout(() => roomTap(room, pt), 300); }
   });
   renderer.domElement.addEventListener('pointermove', e => { if (e.buttons) return; renderer.domElement.style.cursor = pickAt(e, hitTargets) ? 'pointer' : ''; });
 
@@ -825,7 +946,7 @@ function createHome3D(container, data, opts = {}) {
       if (k >= 1) anim = null;
     }
     controls.update(); updateWalls();
-    for (const e of entities) project(e.anchor, icons[e.id]);
+    for (const e of entities) { if (hiddenIcon(e.id)) icons[e.id].style.display = 'none'; else project(e.anchor, icons[e.id]); }
     for (const c of roomChips) project(c.pos, c.b);
     composer.render();
     requestAnimationFrame(loop);
@@ -838,6 +959,7 @@ function createHome3D(container, data, opts = {}) {
   return {
     setState(id, patch) { if (!state[id]) return; Object.assign(state[id], patch); apply(id); if (cardId === id) renderCard(); },
     toast,
+    setSun(up) { sunUp = !!up; if (mode === 'auto' && night !== isNightNow()) applyDayNight(); },
     setMeta(id, m) { if (!state[id]) return; meta[id] = { ...meta[id], ...m }; icons[id].style.opacity = m.unavailable ? 0.45 : ''; if (cardId === id) renderCard(); },
     ids: () => Object.keys(state),
     getState: () => JSON.parse(JSON.stringify(state)),
@@ -860,6 +982,10 @@ const HOUSE = {"H":2700,"walls":[{"type":"box","name":"wall_study_n","x1":723,"y
 //     living_ac: climate.xxx
 //     living_tv: media_player.xxx
 //     entry_door: binary_sensor.xxx
+// kiosk-mode v15.0.0（NemesisRE/kiosk-mode，用户已同意）：手机上隐藏 HA 顶栏和侧边栏，规则在 home3d-dashboard.yaml 的 kiosk_mode。
+// 放在卡片里加载：卡片文件每次都取最新版，不受 loader.js 被浏览器缓存 31 天的影响。
+import('/local/home3d/kiosk-mode.js?v=15.0.0').catch(e => console.warn('kiosk-mode 加载失败', e));
+
 class Home3DCard extends HTMLElement {
   setConfig(config) {
     this._config = { entities: {}, ...config };
@@ -878,16 +1004,22 @@ class Home3DCard extends HTMLElement {
   _init() {
     const root = this.attachShadow({ mode: 'open' });
     const box = document.createElement('div');
-    box.style.cssText = `position:relative;height:${this._config.height || 'calc(100vh - 56px)'};min-height:420px;overflow:hidden;border-radius:var(--ha-card-border-radius,12px)`;
+    box.style.cssText = 'position:relative;min-height:360px;overflow:hidden';
     root.appendChild(box);
+    // 高度：铺满卡片下方剩余的屏幕（有没有 HA 顶栏都适用）；配置了 height 就用配置的
+    const fit = () => { box.style.height = this._config.height || `${Math.max(360, window.innerHeight - box.getBoundingClientRect().top)}px`; };
+    fit(); requestAnimationFrame(fit); setTimeout(fit, 500);
+    window.addEventListener('resize', fit);
     this._last = {};
-    this._api = createHome3D(box, HOUSE, { onCommand: (id, patch) => this._command(id, patch) });
+    this._api = createHome3D(box, HOUSE, { simple: this._config.simple !== false, onCommand: (id, patch) => this._command(id, patch) });
     for (const id of Object.keys(this._map)) this._api.setMeta(id, { linked: true });
   }
 
   // HA → 3D：实体状态变化时同步到模型
   _sync() {
     const h = this._hass;
+    const sun = h.states['sun.sun'];                     // 白天/夜晚跟随真实日出日落
+    if (sun && sun.last_updated !== this._sunLU) { this._sunLU = sun.last_updated; this._api.setSun(sun.state === 'above_horizon'); }
     for (const [id, eid] of Object.entries(this._map)) {
       const st = h.states[eid];
       if (!st) { this._api.setMeta(id, { linked: false }); continue; }

@@ -10,6 +10,10 @@
 //     living_ac: climate.xxx
 //     living_tv: media_player.xxx
 //     entry_door: binary_sensor.xxx
+// kiosk-mode v15.0.0（NemesisRE/kiosk-mode，用户已同意）：手机上隐藏 HA 顶栏和侧边栏，规则在 home3d-dashboard.yaml 的 kiosk_mode。
+// 放在卡片里加载：卡片文件每次都取最新版，不受 loader.js 被浏览器缓存 31 天的影响。
+import('/local/home3d/kiosk-mode.js?v=15.0.0').catch(e => console.warn('kiosk-mode 加载失败', e));
+
 class Home3DCard extends HTMLElement {
   setConfig(config) {
     this._config = { entities: {}, ...config };
@@ -28,16 +32,22 @@ class Home3DCard extends HTMLElement {
   _init() {
     const root = this.attachShadow({ mode: 'open' });
     const box = document.createElement('div');
-    box.style.cssText = `position:relative;height:${this._config.height || 'calc(100vh - 56px)'};min-height:420px;overflow:hidden;border-radius:var(--ha-card-border-radius,12px)`;
+    box.style.cssText = 'position:relative;min-height:360px;overflow:hidden';
     root.appendChild(box);
+    // 高度：铺满卡片下方剩余的屏幕（有没有 HA 顶栏都适用）；配置了 height 就用配置的
+    const fit = () => { box.style.height = this._config.height || `${Math.max(360, window.innerHeight - box.getBoundingClientRect().top)}px`; };
+    fit(); requestAnimationFrame(fit); setTimeout(fit, 500);
+    window.addEventListener('resize', fit);
     this._last = {};
-    this._api = createHome3D(box, HOUSE, { onCommand: (id, patch) => this._command(id, patch) });
+    this._api = createHome3D(box, HOUSE, { simple: this._config.simple !== false, onCommand: (id, patch) => this._command(id, patch) });
     for (const id of Object.keys(this._map)) this._api.setMeta(id, { linked: true });
   }
 
   // HA → 3D：实体状态变化时同步到模型
   _sync() {
     const h = this._hass;
+    const sun = h.states['sun.sun'];                     // 白天/夜晚跟随真实日出日落
+    if (sun && sun.last_updated !== this._sunLU) { this._sunLU = sun.last_updated; this._api.setSun(sun.state === 'above_horizon'); }
     for (const [id, eid] of Object.entries(this._map)) {
       const st = h.states[eid];
       if (!st) { this._api.setMeta(id, { linked: false }); continue; }

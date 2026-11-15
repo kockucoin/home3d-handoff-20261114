@@ -1,16 +1,27 @@
-# 「3D 中控」仪表盘。entities 里把 3D 对象名对应到 HA 实体；没写的设备保持模拟
+# 「3D 中控」仪表盘。entities 里把 3D 对象名对应到 HA 实体；没写的设备不显示（简洁模式）
 # 3D 对象名见 3D模型/说明.md。对应关系如果不对（点 3D 里的灯亮的是别的灯），交换右边的实体即可
 title: 3D 中控
+
+# 手机等窄屏（≤ 900px）全屏：隐藏 HA 顶栏和侧边栏。电脑上保留。
+# 想临时显示顶栏：在网址后面加 ?disable_km
+kiosk_mode:
+  mobile_settings:
+    custom_width: 900
+    hide_header: true
+    hide_sidebar: true
+
 views:
   - title: 我家
     path: home
     panel: true
     cards:
       - type: custom:home3d-card
+        # simple: false   # 显示全部模拟设备、房间名和全部按钮
         entities:
-          # 润盛 LED 智能灯泡 Mesh2.0（米家：客厅）
-          living_ceiling_light: light.xinliy_cn_2225913237_wy0a01_s_2_light
-          # V8 智能色温灯（Mesh）（米家：客厅）
-          dining_pendant: light.giot_cn_1186847478_v8ssm_s_2_light
+          # 2026-11-15 用户实测后对调：客厅灯笼里是 V8 智能色温灯（Mesh），餐厅吊灯里是润盛灯泡
+          # V8 智能色温灯（Mesh）（米家：客厅）→ 客厅纸灯笼吊灯
+          living_ceiling_light: light.giot_cn_1186847478_v8ssm_s_2_light
+          # 润盛 LED 智能灯泡 Mesh2.0（米家：客厅）→ 餐厅布罩吊灯
+          dining_pendant: light.xinliy_cn_2225913237_wy0a01_s_2_light
           # V8 智能色温灯（Mesh）2（米家：卧室）
           bedroom_b_ceiling_light: light.giot_cn_1186847422_v8ssm_s_2_light
