@@ -69,7 +69,8 @@ class Home3DCard extends HTMLElement {
     const h = this._hass;
     const sun = h.states['sun.sun'];                     // 白天/夜晚跟随真实日出日落
     if (sun && sun.last_updated !== this._sunLU) { this._sunLU = sun.last_updated; this._api.setSun(sun.state === 'above_horizon'); }
-    const wx = h.states[this._config.weather || 'weather.forecast_home'];   // 顶栏天气（加了 Met.no 后自动出现）
+    const wxId = h.states[this._config.weather] ? this._config.weather : Object.keys(h.states).find(k => k.startsWith('weather.'));
+    const wx = wxId && h.states[wxId];   // 顶栏天气：用配置的实体，没有就自动用第一个天气实体
     if (wx && wx.last_updated !== this._wxLU) { this._wxLU = wx.last_updated; this._api.setWeather({ cond: wx.state, temp: wx.attributes.temperature }); }
     for (const [id, eid] of Object.entries(this._map)) {
       const st = h.states[eid];
@@ -113,7 +114,7 @@ class Home3DCard extends HTMLElement {
       if (patch.on === false) return call('light', 'turn_off');
       // 情绪灯光：轻点开灯（没有指定亮度/色温）时，按天气和昼夜选亮度色温；按住选的预设不受影响
       if (this._config.mood_by_weather && patch.on === true && patch.brightness == null && patch.ct == null && st?.state !== 'on') {
-        const m = moodFor(h, this._config.weather || 'weather.forecast_home');
+        const m = moodFor(h, h.states[this._config.weather] ? this._config.weather : Object.keys(h.states).find(k => k.startsWith('weather.')));
         return call('light', 'turn_on', { brightness_pct: m.b, color_temp_kelvin: Math.min(a.max_color_temp_kelvin || 6500, Math.max(a.min_color_temp_kelvin || 2700, m.ct)) });
       }
       const data = {};

@@ -34,7 +34,7 @@
       value_template: "{{ trigger.to_state.context.user_id is none and trigger.to_state.context.parent_id is none }}"
   actions:
     - variables:
-        wx: weather.forecast_home
+        wx: "{{ states.weather | map(attribute='entity_id') | first | default('weather.none') }}"   # 自动用第一个天气实体
         night: "{{ is_state('sun.sun', 'below_horizon') }}"
         gloomy: "{{ states(wx) in ['rainy','pouring','cloudy','fog','snowy','snowy-rainy','lightning','lightning-rainy','hail'] }}"
         temp: "{{ state_attr(wx, 'temperature') }}"

@@ -19,7 +19,7 @@ views:
         # simple: false   # 显示全部模拟设备、房间名和全部按钮
         # theme: dark     # 不要液态玻璃，换回深色面板
         mood_by_weather: true            # 轻点开灯时按天气/昼夜自动选亮度色温（按住选的预设不受影响）
-        # weather: weather.forecast_home # 天气实体名不是默认值时才需要写
+        # weather: weather.xxx   # 不写则自动用第一个天气实体；有多个天气实体时在这里指定
         entities:
           # 2026-11-15 用户实测后对调：客厅灯笼里是 V8 智能色温灯（Mesh），餐厅吊灯里是润盛灯泡
           # V8 智能色温灯（Mesh）（米家：客厅）→ 客厅纸灯笼吊灯
