@@ -363,7 +363,7 @@ const B = {
 };
 // 世界坐标直接给出范围的家具
 const BW = {
-  rug(o) { const m = new THREE.Mesh(new THREE.BoxGeometry(M(o.x2 - o.x1), 0.012, M(o.y2 - o.y1)), mat(o.color, { map: texNoise('rug', 0.85, 1, 3), roughness: 1 })); m.position.copy(P((o.x1 + o.x2) / 2, (o.y1 + o.y2) / 2, 6)); return m; },
+  rug(o) { const m = new THREE.Mesh(new THREE.BoxGeometry(M(o.x2 - o.x1), 0.012, M(o.y2 - o.y1)), mat(o.color, { map: texNoise('rug', 0.85, 1, 3), roughness: 1 })); m.position.copy(P((o.x1 + o.x2) / 2, (o.y1 + o.y2) / 2, 14)); return m; },   // 底面离地 8mm，避免和地板抢深度
   counter(o) {
     const g = new THREE.Group(), w = M(o.x2 - o.x1), d = M(o.y2 - o.y1), h = M(o.h);
     at(g, rbox(w, h - 0.1, d, 0.006, woodM(o.color)), 0, 0.1 + (h - 0.1) / 2, 0);
@@ -545,7 +545,8 @@ function createHome3D(container, data, opts = {}) {
   const W = () => root.clientWidth, Hh = () => root.clientHeight;
 
   // ---- 渲染器 ----
-  const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+  // 手机（iPhone 深度精度较低）用对数深度缓冲，避免地板/墙面在转动时闪烁
+  const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance', logarithmicDepthBuffer: touch });
   renderer.setPixelRatio(Math.min(devicePixelRatio, touch ? 1.5 : 2));
   renderer.setSize(W(), Hh());
   renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.0;
@@ -555,7 +556,7 @@ function createHome3D(container, data, opts = {}) {
   const scene = new THREE.Scene();
   const pmrem = new THREE.PMREMGenerator(renderer);
   scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
-  const camera = new THREE.PerspectiveCamera(35, W() / Hh(), 0.1, 200);
+  const camera = new THREE.PerspectiveCamera(35, W() / Hh(), 0.5, 90);   // 近裁面 0.5m（镜头最近 3m），远裁面 90m：深度精度更高
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true; controls.dampingFactor = 0.08;
   controls.minDistance = 3; controls.maxDistance = 40; controls.maxPolarAngle = 80 * DEG;
@@ -591,7 +592,8 @@ function createHome3D(container, data, opts = {}) {
       const pane = new THREE.Mesh(new THREE.BoxGeometry(horiz ? len : 0.01, hgt, horiz ? 0.01 : len), glass('#cfe6f0', 0.22)); mesh.add(pane);
       const fr = mat('#fafafa', { roughness: 0.5 }), t = 0.045;
       const bar = (lx, ly, lw, lh) => { const b = new THREE.Mesh(new THREE.BoxGeometry(horiz ? lw : 0.06, lh, horiz ? 0.06 : lw), fr); b.position.set(horiz ? lx : 0, ly, horiz ? 0 : lx); b.castShadow = true; mesh.add(b); };
-      bar(0, hgt / 2 - t / 2, len, t); bar(0, -hgt / 2 + t / 2, len, t); bar(-len / 2 + t / 2, 0, t, hgt); bar(len / 2 - t / 2, 0, t, hgt);
+      const e = 0.003;   // 窗框比洞口内缩 3mm，不和上下墙体共面（避免闪烁）
+      bar(0, hgt / 2 - t / 2 - e, len - 2 * e, t); bar(0, -hgt / 2 + t / 2 + e, len - 2 * e, t); bar(-len / 2 + t / 2 + e, 0, t, hgt - 2 * e); bar(len / 2 - t / 2 - e, 0, t, hgt - 2 * e);
       const n = Math.max(1, Math.round(len / 0.9)); for (let i = 1; i < n; i++) bar(-len / 2 + (len * i) / n, 0, t * 0.8, hgt);
     } else if (p.group === 'door') {
       mesh = new THREE.Mesh(new THREE.BoxGeometry(w, z2 - z1, d), woodM('#6e4a2c')); mesh.castShadow = true;
@@ -626,7 +628,7 @@ function createHome3D(container, data, opts = {}) {
   { const slabM = mat('#e4e1ea', { roughness: 0.9 });
     for (const r of data.rooms) for (const [x1, y1, x2, y2] of r.rects) {
       const s = new THREE.Mesh(new THREE.BoxGeometry(M(x2 - x1) + 0.24, 0.22, M(y2 - y1) + 0.24), slabM);
-      s.position.set(M((x1 + x2) / 2), -0.111, M((y1 + y2) / 2)); s.receiveShadow = true; scene.add(s);
+      s.position.set(M((x1 + x2) / 2), -0.14, M((y1 + y2) / 2)); s.receiveShadow = true; scene.add(s);   // 顶面在 −3cm，避免和地板抢深度（iPhone 上闪白）
     } }
 
   // ---- 家具 ----
