@@ -358,3 +358,53 @@ const single = shell.replace(/<script type="module" id="boot">[\s\S]*?<\/script>
 if (single === shell) throw new Error('index.html 里没找到 <script type="module" id="boot">');
 writeFileSync(join(OUT, 'preview.html'), single);
 console.log(`prims=${prims.length} walls=${data.walls.length} lights=${lights.length} layout=${layout.length} obj=${(obj.length / 1024).toFixed(0)}KB`);
+
+// ---------- Home Assistant 卡片：app/home3d-card.js（同时复制到 HA 的 config/www/home3d/） ----------
+// HA 页面没有 import map，所以把 three 的裸模块名改成 jsDelivr 的 +esm 完整地址（插件内部引用会指向同一个 three）
+const THREE_V = '0.170.0';
+const cardLib = lib
+  .replace(/from 'three';/g, `from 'https://cdn.jsdelivr.net/npm/three@${THREE_V}/+esm';`)
+  .replace(/from 'three\/addons\/([^']+)';/g, (_, f) => `from 'https://cdn.jsdelivr.net/npm/three@${THREE_V}/examples/jsm/${f}/+esm';`);
+const cardSrc = `${cardLib}\nconst HOUSE = ${JSON.stringify(data)};\n${readFileSync(join(OUT, 'app', 'card.js'), 'utf8')}`;
+writeFileSync(join(OUT, 'app', 'home3d-card.js'), cardSrc);
+const haWww = join(OUT, '..', 'home-assistant', 'config', 'www', 'home3d');
+mkdirSync(haWww, { recursive: true });
+writeFileSync(join(haWww, 'home3d-card.js'), cardSrc);
+console.log(`card → ${haWww}/home3d-card.js (${(cardSrc.length / 1024).toFixed(0)}KB)`);
+
+// ---------- 米家手机中转版：relay.html（由 relay/server.mjs 提供，点 3D 里的灯 → 手机米家开/关） ----------
+const relayBoot = `${lib}
+const RELAY_LIGHTS = ['living_ceiling_light', 'dining_pendant', 'bedroom_b_ceiling_light'];
+const api = window.home3d = createHome3D(document.getElementById('app'), ${JSON.stringify(data)}, {
+  async onCommand(id, patch) {
+    if (!RELAY_LIGHTS.includes(id) || patch.on == null) return;
+    api.setMeta(id, { busy: true });
+    try {
+      const r = await fetch('/api/light', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, on: patch.on }) }).then(x => x.json());
+      if (r.ok) { api.setState(id, { on: r.on }); api.toast((r.on ? '已开灯' : '已关灯') + (r.info ? '（' + r.info + '）' : ''), true); }
+      else { api.setState(id, { on: !patch.on }); api.toast(r.error); }
+    } catch (e) { api.setState(id, { on: !patch.on }); api.toast('连不上 Mac 上的米家中转服务'); }
+    api.setMeta(id, { busy: false });
+  },
+});
+RELAY_LIGHTS.forEach(id => api.setMeta(id, { linked: true, onOffOnly: true, via: '经手机米家控制' }));
+// 打开页面时同步真实状态：中转已知的直接用；不知道的逐个让手机读一次（每盏约 15 秒）
+(async () => {
+  try {
+    const d = await fetch('/api/state').then(r => r.json());
+    for (const id of RELAY_LIGHTS) {
+      const s = d.state[id];
+      if (s && s.on != null) { api.setState(id, { on: s.on }); continue; }
+      api.setMeta(id, { busy: true });
+      const r = await fetch('/api/light', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, read: true }) }).then(x => x.json()).catch(() => ({}));
+      if (r.ok) api.setState(id, { on: r.on });
+      api.setMeta(id, { busy: false });
+    }
+  } catch (e) { api.toast('连不上 Mac 上的米家中转服务'); }
+})();
+`;
+// three.js 用中转服务本地提供的 /vendor（手机访问不了海外 CDN）
+const shellLocal = shell.replace('https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js', '/vendor/build/three.module.js').replace('https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/', '/vendor/examples/jsm/');
+if (shellLocal === shell) throw new Error('index.html 里没找到 three.js 的 CDN 地址');
+writeFileSync(join(OUT, 'relay.html'), shellLocal.replace(/<script type="module" id="boot">[\s\S]*?<\/script>/, () => `<script type="module">\n${relayBoot}</script>`));
+console.log('relay.html 已生成');

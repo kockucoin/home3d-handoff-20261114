@@ -1,0 +1,16 @@
+# 「3D 中控」仪表盘。entities 里把 3D 对象名对应到 HA 实体；没写的设备保持模拟
+# 3D 对象名见 3D模型/说明.md。对应关系如果不对（点 3D 里的灯亮的是别的灯），交换右边的实体即可
+title: 3D 中控
+views:
+  - title: 我家
+    path: home
+    panel: true
+    cards:
+      - type: custom:home3d-card
+        entities:
+          # 润盛 LED 智能灯泡 Mesh2.0（米家：客厅）
+          living_ceiling_light: light.xinliy_cn_2225913237_wy0a01_s_2_light
+          # V8 智能色温灯（Mesh）（米家：客厅）
+          dining_pendant: light.giot_cn_1186847478_v8ssm_s_2_light
+          # V8 智能色温灯（Mesh）2（米家：卧室）
+          bedroom_b_ceiling_light: light.giot_cn_1186847422_v8ssm_s_2_light

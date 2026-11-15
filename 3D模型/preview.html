@@ -483,6 +483,8 @@ const CSS = `
 .h3 input[type=range]{width:100%;accent-color:#ffd27a;height:28px}
 .h3-seg{display:flex;gap:6px}.h3-seg .h3-btn{flex:1}
 .h3-temp{display:flex;align-items:center;gap:12px}.h3-temp b{font-size:28px;font-weight:600;min-width:70px;text-align:center}
+.h3-toast{position:absolute;left:50%;bottom:max(70px,env(safe-area-inset-bottom));transform:translateX(-50%);padding:10px 16px;border-radius:12px;background:rgba(200,50,50,.92);color:#fff;font-size:14px;pointer-events:none;opacity:0;transition:opacity .3s;max-width:80%;text-align:center}
+.h3-toast.show{opacity:1}
 .h3-hint{position:absolute;left:16px;bottom:max(14px,env(safe-area-inset-bottom));font-size:12px;opacity:.6;pointer-events:none}
 @media (max-width:640px){.h3-card{left:10px;right:10px;width:auto}.h3-hint{display:none}.h3-clock b{font-size:18px}}
 `;
@@ -496,7 +498,9 @@ const ICON = {
 
 // ================= 主函数 =================
 function createHome3D(container, data, opts = {}) {
-  if (!document.getElementById('h3-style')) { const s = document.createElement('style'); s.id = 'h3-style'; s.textContent = CSS; document.head.appendChild(s); }
+  // 样式放进容器所在的根（HA 卡片在 shadow DOM 里，document.head 的样式进不去）
+  const styleHost = container.getRootNode() instanceof ShadowRoot ? container.getRootNode() : document.head;
+  if (!styleHost.querySelector('#h3-style')) { const s = document.createElement('style'); s.id = 'h3-style'; s.textContent = CSS; styleHost.appendChild(s); }
   const root = document.createElement('div'); root.className = 'h3'; container.appendChild(root);
   const touch = matchMedia('(pointer: coarse)').matches;
   const W = () => root.clientWidth, Hh = () => root.clientHeight;
@@ -601,6 +605,7 @@ function createHome3D(container, data, opts = {}) {
 
   // ---- 设备状态 ----
   const state = {};
+  const meta = {};            // id → { linked, effects, minK, maxK, unavailable }：由外部（HA 卡片）提供
   const entities = [];        // { id, label, room, type, anchor(Vector3), ... }
   const lamps = {};
   for (const l of data.lights) {
@@ -685,6 +690,8 @@ function createHome3D(container, data, opts = {}) {
     return { b, pos: P(r.at[0], r.at[1], 30) };
   });
   const card = document.createElement('div'); card.className = 'h3-card'; card.hidden = true; layer.appendChild(card);
+  const toastEl = document.createElement('div'); toastEl.className = 'h3-toast'; layer.appendChild(toastEl); let toastT;
+  const toast = (msg, ok = false) => { toastEl.textContent = msg; toastEl.style.background = ok ? 'rgba(40,140,80,.92)' : ''; toastEl.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => toastEl.classList.remove('show'), 4000); };
   let cardId = null;
 
   function command(id, patch) {          // 用户操作 → 更新本地 → 通知外部（HA）
@@ -695,12 +702,13 @@ function createHome3D(container, data, opts = {}) {
   function openCard(id) { cardId = id; renderCard(); card.hidden = false; refreshUI(); }
   function closeCard() { cardId = null; card.hidden = true; refreshUI(); }
   function renderCard() {
-    const e = entities.find(x => x.id === cardId), s = state[cardId];
+    const e = entities.find(x => x.id === cardId), s = state[cardId], mt = meta[cardId] || {};
     let body = '';
     if (e.type === 'light') body = `
-      <div class="h3-row"><label>开关</label><button class="h3-sw ${s.on ? 'on' : ''}" data-k="on"></button></div>
-      <div class="h3-row"><label>亮度 ${s.brightness}%</label></div><input type="range" min="1" max="100" value="${s.brightness}" data-k="brightness">
-      <div class="h3-row"><label>色温 ${s.ct}K</label></div><input type="range" min="2700" max="6500" step="100" value="${s.ct}" data-k="ct">`;
+      <div class="h3-row"><label>开关</label><button class="h3-sw ${s.on ? 'on' : ''}" data-k="on" ${mt.busy ? 'disabled style="opacity:.5"' : ''}></button></div>
+      ${mt.onOffOnly ? '<div class="sub">初版只支持开 / 关；亮度和色温请在米家 App 里调</div>' : `<div class="h3-row"><label>亮度 ${s.brightness}%</label></div><input type="range" min="1" max="100" value="${s.brightness}" data-k="brightness">
+      <div class="h3-row"><label>色温 ${s.ct}K</label></div><input type="range" min="${mt.minK || 2700}" max="${mt.maxK || 6500}" step="100" value="${s.ct}" data-k="ct">
+      ${mt.effects?.length ? `<div class="h3-row"><label>情景模式</label></div><div class="h3-seg" style="flex-wrap:wrap">${mt.effects.map(f => `<button class="h3-btn ${s.effect === f ? 'on' : ''}" data-set="effect:${f}" style="flex:0 0 calc(25% - 5px)">${f}</button>`).join('')}</div>` : ''}`}`;
     else if (e.type === 'blind') body = `
       <div class="h3-row"><label>打开 ${s.position}%</label></div><input type="range" min="0" max="100" value="${s.position}" data-k="position">
       <div class="h3-seg"><button class="h3-btn" data-set="position:0">关闭</button><button class="h3-btn" data-set="position:50">一半</button><button class="h3-btn" data-set="position:100">打开</button></div>`;
@@ -710,14 +718,14 @@ function createHome3D(container, data, opts = {}) {
       <div class="h3-seg">${[['cool', '制冷'], ['heat', '制热'], ['fan', '送风']].map(([k, t]) => `<button class="h3-btn ${s.mode === k ? 'on' : ''}" data-set="mode:${k}">${t}</button>`).join('')}</div>`;
     else if (e.type === 'tv') body = `<div class="h3-row"><label>开关</label><button class="h3-sw ${s.on ? 'on' : ''}" data-k="on"></button></div>`;
     else body = `<div class="h3-row"><label>状态</label><span>${s.closed ? '已关闭' : '已打开'}</span></div><div class="sub">接入门磁后显示真实状态</div>`;
-    card.innerHTML = `<button class="h3-x" aria-label="关闭">×</button><h3>${ICON[e.type].replace('<svg', '<svg width="20" height="20"')}${e.label}</h3><div class="sub">${e.room} · ${opts.onCommand ? '已连接' : '模拟模式'}</div>${body}`;
+    card.innerHTML = `<button class="h3-x" aria-label="关闭">×</button><h3>${ICON[e.type].replace('<svg', '<svg width="20" height="20"')}${e.label}</h3><div class="sub">${e.room} · ${mt.busy ? '正在通过手机切换…' : mt.unavailable ? '设备离线' : mt.linked ? (mt.via || '已连接米家') : '模拟模式（未绑定设备）'}</div>${body}`;
     card.querySelector('.h3-x').onclick = closeCard;
     card.querySelectorAll('[data-k=on]').forEach(b => b.onclick = () => command(cardId, { on: !state[cardId].on }));
     card.querySelectorAll('input[type=range]').forEach(r => {
       r.oninput = () => { const k = r.dataset.k, v = +r.value; Object.assign(state[cardId], { [k]: v }); if (k === 'brightness' || k === 'ct') state[cardId].on = true; apply(cardId); r.previousElementSibling?.querySelector?.('label') && null; const lab = r.previousElementSibling.querySelector('label'); if (lab) lab.textContent = { brightness: `亮度 ${v}%`, ct: `色温 ${v}K`, position: `打开 ${v}%` }[k]; };
       r.onchange = () => command(cardId, { [r.dataset.k]: +r.value, ...(r.dataset.k !== 'position' ? { on: true } : {}) });
     });
-    card.querySelectorAll('[data-set]').forEach(b => b.onclick = () => { const [k, v] = b.dataset.set.split(':'); command(cardId, { [k]: isNaN(+v) ? v : +v }); });
+    card.querySelectorAll('[data-set]').forEach(b => b.onclick = () => { const i = b.dataset.set.indexOf(':'), k = b.dataset.set.slice(0, i), v = b.dataset.set.slice(i + 1); command(cardId, { [k]: isNaN(+v) ? v : +v, ...(k === 'effect' ? { on: true } : {}) }); });
     card.querySelectorAll('[data-step]').forEach(b => b.onclick = () => command(cardId, { temp: Math.min(30, Math.max(16, state[cardId].temp + +b.dataset.step)) }));
   }
   function refreshUI() {
@@ -772,7 +780,9 @@ function createHome3D(container, data, opts = {}) {
     const pos = target.clone().addScaledVector(off, 4.2).add(new THREE.Vector3(0, 6.8, 0));
     animateTo(target, pos);
   }
-  overview(true);
+  // HA 卡片创建时容器可能还是 0×0：等拿到真实尺寸后再取景
+  let framed = false;
+  if (W() > 0 && Hh() > 0) { overview(true); framed = true; }
 
   // 墙体显示高度：朝向镜头的外墙压低到 1 米；"矮墙"模式下所有墙压到 1.2 米（影子墙不变）
   const LOW = 1.0, CUT = 1.2; let cutAll = false;
@@ -817,7 +827,8 @@ function createHome3D(container, data, opts = {}) {
   function resize() {
     const w = W(), h = Hh(); if (!w || !h) return;
     camera.aspect = w / h; camera.updateProjectionMatrix();
-    renderer.setSize(w, h); composer.setSize(w, h);
+    renderer.setSize(w, h); composer.setSize(w, h); bloom.setSize(w, h);
+    if (!framed) { framed = true; overview(true); }
   }
   new ResizeObserver(resize).observe(root);
   function loop(t) {
@@ -839,6 +850,9 @@ function createHome3D(container, data, opts = {}) {
 
   return {
     setState(id, patch) { if (!state[id]) return; Object.assign(state[id], patch); apply(id); if (cardId === id) renderCard(); },
+    toast,
+    setMeta(id, m) { if (!state[id]) return; meta[id] = { ...meta[id], ...m }; icons[id].style.opacity = m.unavailable ? 0.45 : ''; if (cardId === id) renderCard(); },
+    ids: () => Object.keys(state),
     getState: () => JSON.parse(JSON.stringify(state)),
     flyTo, overview, openCard, setMode(m) { mode = m; applyDayNight(); },
     _debug: { scene, camera, renderer, THREE },

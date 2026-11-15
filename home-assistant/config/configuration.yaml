@@ -1,10 +1,43 @@
 
-# Loads default set of integrations. Do not remove.
-default_config:
+# 原来是 default_config:（含 bluetooth）。这台 Mac 上蓝牙扫描会让 macOS 结束 HA 进程，
+# 所以改为逐项列出、去掉 bluetooth。米家蓝牙 Mesh 灯走小米云 + 网关，不需要 Mac 的蓝牙。
+assist_pipeline:
+cloud:
+conversation:
+dhcp:
+energy:
+file:
+go2rtc:
+history:
+homeassistant_alerts:
+logbook:
+media_source:
+mobile_app:
+my:
+ssdp:
+stream:
+sun:
+usage_prediction:
+usb:
+webhook:
+zeroconf:
 
 # Load frontend themes from the themes folder
 frontend:
   themes: !include_dir_merge_named themes
+  # 3D 中控卡片：loader.js 每次加载最新的 home3d-card.js（改卡片后刷新页面即可，不用重启）
+  extra_module_url:
+    - /local/home3d/loader.js
+
+# 侧边栏里的「3D 中控」仪表盘
+lovelace:
+  dashboards:
+    home-3d:
+      mode: yaml
+      title: 3D 中控
+      icon: mdi:floor-plan
+      show_in_sidebar: true
+      filename: home3d-dashboard.yaml
 
 automation: !include automations.yaml
 script: !include scripts.yaml
