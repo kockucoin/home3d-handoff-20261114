@@ -4,7 +4,7 @@
 在 iPad 上有一个可交互的 3D 户型界面，点 3D 里的灯/电器就能控制真实设备；设备主要是米家生态。
 长期方案：Home Assistant（HA）+ Xiaomi Home 集成 + 3D 户型卡片（Floor3D Card 或自制卡片），iPad 当中控屏，Siri/小爱做语音。
 
-## 当前进度（2026-11-15 第三次存档）
+## 当前进度（2026-11-15 最新）
 | 阶段 | 状态 |
 |---|---|
 | 户型 3D 模型（按户型图毫米尺寸程序生成） | ✅ 完成：`3D模型/home.obj/.mtl`，10 盏灯 + 电器均按英文名命名 |
@@ -37,6 +37,15 @@
 - kiosk-mode v15.0.0（用户同意）放在 config/www/home3d/，由卡片自己 import（loader.js 会被缓存 31 天，所以不靠它）；dashboard yaml 的 kiosk_mode 在 ≤900px 宽隐藏 HA 顶栏/侧边栏。用户手机上是否生效待确认。
 - 安卓工具：~/Library/Android/Android-Dev-Mac-AppleSilicon（只解压了 jbr/android-35/build-tools 35/platform-tools，0.46GB；放「文稿」会触发隐私弹窗，已移出）。
 
+
+## 2026-11-15 夜：HA 侧配置收尾
+- 3D 卡片拆成两部分：`home3d-card.js`（7KB 外壳，立即注册，修 iPhone「配置错误」）+ `home3d-core.js`（引擎+户型，后台加载）；three.js 0.170 由 HA 本地提供（`config/www/home3d/vendor/`，不再用 jsDelivr）。
+- 默认液态玻璃主题（`theme: dark` 可关）；顶栏有天气位（需 weather 实体）；`mood_by_weather: true` 已开：轻点开灯按天气/昼夜配光。
+- 自动化：`config/automations.yaml` 已启用 ①「米家/小爱/开关开灯时按天气配光」；②「日落温馨」③「阴雨补光」注释中。
+- **待用户决定**：HA 里时区仍是 America/Los_Angeles、位置不在国内、没有天气集成（Met.no 未添加）。用户表示不改；因此 ② 暂不启用（会按美国日落时间触发），天气位不显示，天气配光按“晴天”处理。改好后：取消 ② 的注释 → 开发者工具 → YAML → 重新加载自动化。
+- 自动化修改后需在 HA 里「开发者工具 → YAML → 自动化 → 重新加载」（或重启 HA）才生效。
+- 文件：`home-assistant/天气与情绪灯光/接入指南.md`、`天气情绪灯光.yaml`（完整版，含 ②③）。
+
 ## 关键决定与原因
 - **不用 Sweet Home 3D**：用户在里面画户型失败；改为脚本 `build.mjs` 按户型图尺寸直接生成模型，可复现、可改。
 - **酷家乐网页设计工具很慢**：用户在美国（PST），访问国内酷家乐首页约 20 秒；与代理无关。酷家乐仅用于出方案，不作为 HA 联动的载体。
@@ -64,6 +73,12 @@
 | `3D模型/preview.html` | 3D 中控页单文件（build.mjs 把 app/home3d.js + 数据内联生成；three.js 0.170 走 CDN） |
 | `3D模型/app/home3d.js` | 3D 中控页源码：家具/灯具生成器、灯光、墙体压低、图标、控制卡片、场景、镜头 |
 | `3D模型/app/index.html`, `app/house.json` | 拆分版页面 + build.mjs 导出的户型/布局/设备数据 |
+| `3D模型/app/card.js` | HA 卡片外壳源码（build 生成 `config/www/home3d/home3d-card.js` + `home3d-core.js`） |
+| `3D模型/app/vendor/` | three.js 0.170 本地副本（build 时复制到 HA 并改写 import） |
+| `3D模型/relay/server.mjs` | 旧的手机中转（adb 操作米家），已停用，保留备查 |
+| `home-assistant/config/home3d-dashboard.yaml` | 「3D 中控」仪表盘：实体映射、kiosk_mode、mood_by_weather |
+| `home-assistant/config/automations.yaml` | 情绪灯光自动化（① 启用） |
+| `home-assistant/天气与情绪灯光/` | 天气接入指南 + 完整自动化 YAML |
 | `3D模型/说明.md` | 可控制对象名对照表、Floor3D 配置示例、酷家乐方案记录 |
 | `3D模型/酷家乐平面图.jpg` | 酷家乐方案的 2D 平面截图 |
 | `3D模型/.kjl/*.json`, `picks.txt` | 酷家乐 CLI 用到的墙体/门窗/家具参数与选品 ID |
