@@ -1,0 +1,99 @@
+# 天气 · 情绪灯光 自动化（Home Assistant 2026.11）
+# 用法：把下面的内容复制进 config/automations.yaml（原来是 [] 就整个替换掉），
+#       然后 开发者工具 → YAML → 「自动化」重新加载。详见同目录「接入指南.md」。
+#
+# 用到的实体（如果你那边的名字不一样，全文替换即可）：
+#   weather.forecast_home                          Met.no 天气
+#   sun.sun                                        日出日落（自带）
+#   light.giot_cn_1186847478_v8ssm_s_2_light       客厅灯笼（V8 智能色温灯）
+#   light.xinliy_cn_2225913237_wy0a01_s_2_light    餐厅吊灯（润盛灯泡）
+#   light.giot_cn_1186847422_v8ssm_s_2_light       卧室B 吊灯（V8 智能色温灯 2）
+#
+# 配光规则（和 3D 页面「轻点开灯按天气」一致）：
+#   夜里                 30% · 2700K
+#   阴 / 雨 / 雪 / 雾 白天  65% · 3000K
+#   晴朗白天             85% · 4300K
+#   白天气温 ≥ 30°C 色温 +600K（看着凉快），≤ 10°C 色温 −300K（看着暖和）
+
+# ① 用米家 App、小爱同学或墙上开关开灯时，按天气和昼夜自动配光
+#    只处理 HA 之外的开灯（context.user_id 为空）；在 3D 页面里开灯、选预设不会被它改掉。
+- id: mood_external_on_by_weather
+  alias: 情绪灯光｜米家/小爱/开关开灯时按天气配光
+  description: 夜里暖暗、阴雨天暖一点、晴天中性亮；只作用于 HA 之外的开灯
+  mode: parallel
+  triggers:
+    - trigger: state
+      entity_id:
+        - light.giot_cn_1186847478_v8ssm_s_2_light
+        - light.xinliy_cn_2225913237_wy0a01_s_2_light
+        - light.giot_cn_1186847422_v8ssm_s_2_light
+      from: "off"
+      to: "on"
+  conditions:
+    - condition: template
+      value_template: "{{ trigger.to_state.context.user_id is none and trigger.to_state.context.parent_id is none }}"
+  actions:
+    - variables:
+        wx: weather.forecast_home
+        night: "{{ is_state('sun.sun', 'below_horizon') }}"
+        gloomy: "{{ states(wx) in ['rainy','pouring','cloudy','fog','snowy','snowy-rainy','lightning','lightning-rainy','hail'] }}"
+        temp: "{{ state_attr(wx, 'temperature') }}"
+        bri: "{{ 30 if night else (65 if gloomy else 85) }}"
+        kelvin: >-
+          {% set k = 2700 if night else (3000 if gloomy else 4300) %}
+          {% if not night and temp is number %}{% set k = k + (600 if temp >= 30 else (-300 if temp <= 10 else 0)) %}{% endif %}
+          {{ k }}
+    - action: light.turn_on
+      target:
+        entity_id: "{{ trigger.entity_id }}"
+      data:
+        brightness_pct: "{{ bri }}"
+        color_temp_kelvin: "{{ kelvin }}"
+
+# ② 日落前 15 分钟，客厅灯笼自动开到「温馨」（只在它关着时）
+- id: mood_sunset_cozy_living
+  alias: 情绪灯光｜日落后客厅自动「温馨」
+  description: 天黑前把客厅调成 45% · 2900K 的暖光
+  mode: single
+  triggers:
+    - trigger: sun
+      event: sunset
+      offset: "-00:15:00"
+  conditions:
+    - condition: state
+      entity_id: light.giot_cn_1186847478_v8ssm_s_2_light
+      state: "off"
+  actions:
+    - action: light.turn_on
+      target:
+        entity_id: light.giot_cn_1186847478_v8ssm_s_2_light
+      data:
+        brightness_pct: 45
+        color_temp_kelvin: 2900
+
+# ③ 阴雨天白天客厅自动补光 —— 默认不启用
+#    没有人体/人在传感器时，家里没人也会开灯。买了传感器后，删掉下面每行开头的「# 」并加上「有人」条件再启用。
+# - id: mood_gloomy_daylight_living
+#   alias: 情绪灯光｜阴雨天白天客厅补光
+#   mode: single
+#   triggers:
+#     - trigger: state
+#       entity_id: weather.forecast_home
+#       to: [rainy, pouring, cloudy, fog, snowy, snowy-rainy, lightning, lightning-rainy, hail]
+#   conditions:
+#     - condition: state
+#       entity_id: sun.sun
+#       state: above_horizon
+#     - condition: time
+#       after: "09:00:00"
+#       before: "17:30:00"
+#     - condition: state
+#       entity_id: light.giot_cn_1186847478_v8ssm_s_2_light
+#       state: "off"
+#   actions:
+#     - action: light.turn_on
+#       target:
+#         entity_id: light.giot_cn_1186847478_v8ssm_s_2_light
+#       data:
+#         brightness_pct: 65
+#         color_temp_kelvin: 4000

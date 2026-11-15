@@ -495,6 +495,7 @@ const CSS2 = `
 .h3-pre button i{display:block;font-style:normal;font-size:10px;opacity:.55;margin-top:2px}.h3-pre button.on{background:#ffd27a;color:#3a2600}.h3-pre button.on i{opacity:.8}
 .h3-bar.simple .h3-clock small{white-space:nowrap}
 .h3-bar.simple{gap:10px;padding:7px 7px 7px 16px;border-radius:26px;flex-wrap:nowrap}
+.h3-wx{font-size:13px;white-space:nowrap;display:flex;align-items:center;gap:4px}.h3-wx[hidden]{display:none}.h3-wx i{font-style:normal;font-size:17px}
 .h3-sep{width:1px;height:26px;background:rgba(255,255,255,.18);flex:none}
 .h3-ib{width:36px;height:36px;border-radius:50%;border:0;display:grid;place-items:center;background:rgba(255,255,255,.12);color:#fff;cursor:pointer;flex:none;padding:0}
 .h3-ib svg{width:18px;height:18px}.h3-ib.on{background:#ffd27a;color:#3a2600}
@@ -707,7 +708,7 @@ function createHome3D(container, data, opts = {}) {
   if (simple) bar.classList.add('simple');
   bar.innerHTML = simple
     ? `<div class="h3-clock"><b></b><small></small></div><div class="h3-sep"></div>
-       <button class="h3-ib" data-a="day"></button><div class="h3-sum"></div>
+       <button class="h3-ib" data-a="day"></button><div class="h3-wx" hidden></div><div class="h3-sum"></div>
        <button class="h3-ib" data-a="alloff" title="全部关灯" aria-label="全部关灯">${ICON.power}</button>
        <button class="h3-ib" data-a="more" title="更多" aria-label="更多">${ICON.dots}</button>
        <div class="h3-btns h3-more" hidden><button class="h3-btn" data-a="allon">全部开灯</button><button class="h3-btn" data-a="cut">矮墙看全屋</button><button class="h3-btn" data-a="home">回到总览</button></div>`
@@ -959,6 +960,13 @@ function createHome3D(container, data, opts = {}) {
   return {
     setState(id, patch) { if (!state[id]) return; Object.assign(state[id], patch); apply(id); if (cardId === id) renderCard(); },
     toast,
+    // 天气：{ cond: HA 天气状态（sunny/cloudy/rainy…）, temp: 气温 }；只在简洁模式顶栏显示
+    setWeather(w) {
+      const el = bar.querySelector('.h3-wx'); if (!el) return;
+      if (!w || w.cond == null) { el.hidden = true; return; }
+      const ic = { sunny: '☀️', 'clear-night': '🌙', partlycloudy: '⛅', cloudy: '☁️', fog: '🌫️', rainy: '🌧️', pouring: '🌧️', 'lightning-rainy': '⛈️', lightning: '⚡', snowy: '❄️', 'snowy-rainy': '🌨️', hail: '🌨️', windy: '💨', 'windy-variant': '💨', exceptional: '⚠️' }[w.cond] || '🌡️';
+      el.innerHTML = `<i>${ic}</i>${w.temp != null ? Math.round(w.temp) + '°' : ''}`; el.hidden = false;
+    },
     setSun(up) { sunUp = !!up; if (mode === 'auto' && night !== isNightNow()) applyDayNight(); },
     setMeta(id, m) { if (!state[id]) return; meta[id] = { ...meta[id], ...m }; icons[id].style.opacity = m.unavailable ? 0.45 : ''; if (cardId === id) renderCard(); },
     ids: () => Object.keys(state),

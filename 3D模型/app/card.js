@@ -14,6 +14,18 @@
 // 放在卡片里加载：卡片文件每次都取最新版，不受 loader.js 被浏览器缓存 31 天的影响。
 import('/local/home3d/kiosk-mode.js?v=15.0.0').catch(e => console.warn('kiosk-mode 加载失败', e));
 
+// 天气 → 灯光（和「天气情绪灯光.yaml」里的自动化规则一致）
+//   夜里：30% · 2700K；阴/雨/雪/雾的白天：65% · 3000K；晴朗白天：85% · 4300K
+//   气温 ≥ 30°C 色温再 +600K（看着凉快）；≤ 10°C 再 −300K（看着暖和）
+const GLOOMY = ['rainy', 'pouring', 'cloudy', 'fog', 'snowy', 'snowy-rainy', 'lightning', 'lightning-rainy', 'hail'];
+function moodFor(h, weatherId) {
+  const night = h.states['sun.sun']?.state === 'below_horizon';
+  const wx = h.states[weatherId], gloomy = wx && GLOOMY.includes(wx.state), t = wx?.attributes?.temperature;
+  let b = night ? 30 : gloomy ? 65 : 85, ct = night ? 2700 : gloomy ? 3000 : 4300;
+  if (!night && t != null) ct += t >= 30 ? 600 : t <= 10 ? -300 : 0;
+  return { b, ct };
+}
+
 class Home3DCard extends HTMLElement {
   setConfig(config) {
     this._config = { entities: {}, ...config };
@@ -48,6 +60,8 @@ class Home3DCard extends HTMLElement {
     const h = this._hass;
     const sun = h.states['sun.sun'];                     // 白天/夜晚跟随真实日出日落
     if (sun && sun.last_updated !== this._sunLU) { this._sunLU = sun.last_updated; this._api.setSun(sun.state === 'above_horizon'); }
+    const wx = h.states[this._config.weather || 'weather.forecast_home'];   // 顶栏天气（加了 Met.no 后自动出现）
+    if (wx && wx.last_updated !== this._wxLU) { this._wxLU = wx.last_updated; this._api.setWeather({ cond: wx.state, temp: wx.attributes.temperature }); }
     for (const [id, eid] of Object.entries(this._map)) {
       const st = h.states[eid];
       if (!st) { this._api.setMeta(id, { linked: false }); continue; }
@@ -88,6 +102,11 @@ class Home3DCard extends HTMLElement {
     if (dom === 'switch') return call('switch', patch.on === false ? 'turn_off' : 'turn_on');
     if (dom === 'light') {
       if (patch.on === false) return call('light', 'turn_off');
+      // 情绪灯光：轻点开灯（没有指定亮度/色温）时，按天气和昼夜选亮度色温；按住选的预设不受影响
+      if (this._config.mood_by_weather && patch.on === true && patch.brightness == null && patch.ct == null && st?.state !== 'on') {
+        const m = moodFor(h, this._config.weather || 'weather.forecast_home');
+        return call('light', 'turn_on', { brightness_pct: m.b, color_temp_kelvin: Math.min(a.max_color_temp_kelvin || 6500, Math.max(a.min_color_temp_kelvin || 2700, m.ct)) });
+      }
       const data = {};
       if (patch.brightness != null) data.brightness_pct = patch.brightness;
       if (patch.ct != null) data.color_temp_kelvin = Math.min(a.max_color_temp_kelvin || 6500, Math.max(a.min_color_temp_kelvin || 2700, patch.ct));
