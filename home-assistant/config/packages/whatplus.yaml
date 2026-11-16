@@ -148,6 +148,7 @@ media_player:
       {% else %}on{% endif %}
     attributes:
       is_volume_muted: sensor.whatplus_mac_audio|muted
+      volume_level: sensor.whatplus_mac_volume_level
     commands:
       media_play:
         action: script.whatplus_mac
@@ -176,6 +177,14 @@ media_player:
           body: "{{ {'action': 'volume', 'value': (volume_level * 100) | round(0) | int} }}"
 
 template:
+  - sensor:
+      # 0–1 的音量，给「唱片机音乐」媒体播放器用
+      - name: WhatPlus Mac Volume Level
+        unique_id: whatplus_mac_volume_level
+        state: >-
+          {% set v = state_attr('sensor.whatplus_mac_audio', 'volume') %}
+          {{ (v / 100) | round(2) if v is number else none }}
+
   - light:
       - name: WhatPlus Light
         unique_id: whatplus_light

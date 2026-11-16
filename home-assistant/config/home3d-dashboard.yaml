@@ -29,4 +29,6 @@ views:
           # V8 智能色温灯（Mesh）2（米家：卧室）
           bedroom_b_ceiling_light: light.giot_cn_1186847422_v8ssm_s_2_light
           # WhatPlus 1916 Pro 唱片机（入户门旁餐边置物架上层）：开关 + 6 种灯效，经 whatplus-bridge 蓝牙控制
-          dining_turntable: light.whatplus_light
+          dining_turntable:
+            entity: light.whatplus_light
+            media: media_player.whatplus_music   # 面板里的播放键、音量、情绪模式

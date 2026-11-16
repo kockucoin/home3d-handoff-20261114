@@ -477,6 +477,13 @@ function buildLamp(l) {
 // 灯光强度（坎德拉，三维场景按米计）
 const LIGHT_POWER = { lantern: 6.5, drum: 3.5, woven: 4, square: 4, round: 2.5, bulb: 3, floor: 1.4, mushroom: 0.7, turntable: 0.5 };
 // 唱片机灯效 → 颜色（名称与 HA 的 light.whatplus_light 一致）；名字含「呼吸」的会明暗起伏
+// 唱片机情绪模式：灯效 + 播放 + 音量一键切换
+const TT_MOODS = [
+  { k: '黑胶时光', sub: '暖白·35%', fx: '暖白呼吸', vol: 35 },
+  { k: '浪漫晚餐', sub: '红橙·28%', fx: '红橙呼吸', vol: 28 },
+  { k: '派对', sub: '紫色·60%', fx: '紫色呼吸', vol: 60 },
+  { k: '深夜静听', sub: '深蓝·18%', fx: '深蓝呼吸', vol: 18 },
+];
 const EFFECT_COLOR = { 冷白常亮: '#dcebff', 暖白呼吸: '#ffc879', 红橙呼吸: '#ff5a1f', 浅蓝呼吸: '#4fc3ff', 深蓝呼吸: '#2a55ff', 紫色呼吸: '#a04dff' };
 function kelvinRGB(k) {          // 色温 → 颜色（近似）
   const t = k / 100; let r, g, b;
@@ -537,6 +544,14 @@ const CSS2 = `
 .h3 input[type=range].h3-r::-moz-range-thumb{width:26px;height:26px;border:0;border-radius:50%;background:#fff}
 .h3-pre{display:flex;gap:6px;margin-top:12px}.h3-pre button{flex:1;border:0;border-radius:12px;padding:7px 0 6px;background:rgba(255,255,255,.1);color:#fff;font:inherit;font-size:13px;cursor:pointer;line-height:1.2}
 .h3-pre button i{display:block;font-style:normal;font-size:10px;opacity:.55;margin-top:2px}.h3-pre button.on{background:#ffd27a;color:#3a2600}.h3-pre button.on i{opacity:.8}
+.h3-play{display:flex;justify-content:center;align-items:center;gap:22px;margin:14px 0 4px}
+.h3-play button{border:0;border-radius:50%;width:44px;height:44px;display:grid;place-items:center;background:rgba(255,255,255,.12);color:#fff;cursor:pointer;font-size:17px;line-height:1}
+.h3-play button.big{width:58px;height:58px;font-size:22px;background:#fff;color:#1d1d24}
+.h3-play button:active{transform:scale(.94)}
+.h3-fx{display:flex;justify-content:space-between;gap:8px;margin-top:6px}
+.h3-fx button{flex:1;aspect-ratio:1;max-width:42px;border-radius:50%;border:2px solid rgba(255,255,255,.25);background:var(--c);cursor:pointer;position:relative;padding:0}
+.h3-fx button.br::after{content:'';position:absolute;inset:-6px;border-radius:50%;border:1px dashed var(--c);opacity:.7}
+.h3-fx button.on{border-color:#fff;box-shadow:0 0 14px var(--c)}
 .h3-bar.simple .h3-clock small{white-space:nowrap}
 .h3-bar.simple{gap:10px;padding:7px 7px 7px 16px;border-radius:26px;flex-wrap:nowrap}
 .h3-wx{font-size:13px;white-space:nowrap;display:flex;align-items:center;gap:4px}.h3-wx[hidden]{display:none}.h3-wx i{font-style:normal;font-size:17px}
@@ -904,8 +919,40 @@ function createHome3D(container, data, opts = {}) {
     });
     card.querySelectorAll('[data-preset]').forEach(b => b.onclick = () => { const p = PRESETS[+b.dataset.preset]; command(cardId, { on: true, brightness: p.b, ct: clampK(p.ct) }); });
   }
+  // 唱片机面板：播放控制 + 音量 + 情绪模式（灯效+音乐一键）+ 灯效色块
+  function renderTurntableSheet(e, s, mt) {
+    const fxNames = mt.effects?.length ? mt.effects : Object.keys(EFFECT_COLOR);
+    const status = mt.unavailable ? '设备离线' : !s.on ? '灯已关' : `${s.effect || '灯已开'}`;
+    const music = s.playing == null ? '' : s.playing ? ' · 正在播放' : ' · 已暂停';
+    const vol = s.volume ?? 30;
+    const moodOn = m => s.on && s.effect === m.fx && s.playing !== false;
+    card.innerHTML = `<div class="h3-head"><button class="ic ${s.on ? 'on' : ''}" data-k="on" aria-label="灯光开关">${ICON.light}</button>
+      <div class="t"><b>${e.label}</b><small>${e.room} · ${status}${music}${mt.linked ? '' : '（模拟）'}</small></div><button class="h3-x" aria-label="收起">×</button></div>
+      <div class="h3-play"><button data-m="previous" aria-label="上一首">⏮</button><button class="big" data-m="${s.playing ? 'pause' : 'play'}" aria-label="${s.playing ? '暂停' : '播放'}">${s.playing ? '❚❚' : '▶'}</button><button data-m="next" aria-label="下一首">⏭</button></div>
+      <div class="h3-lab"><span>音量</span><span data-v="volume">${vol}%</span></div>
+      <input type="range" class="h3-r" data-k="volume" min="0" max="100" value="${vol}" style="--trk:linear-gradient(90deg,#c9b8ff ${vol}%,rgba(255,255,255,.14) ${vol}%)">
+      <div class="h3-lab"><span>情绪模式</span><span></span></div>
+      <div class="h3-pre">${TT_MOODS.map((m, i) => `<button data-mood="${i}" class="${moodOn(m) ? 'on' : ''}">${m.k}<i>${m.sub}</i></button>`).join('')}</div>
+      <div class="h3-lab"><span>灯效</span><span>${s.on && s.effect ? s.effect : ''}</span></div>
+      <div class="h3-fx">${fxNames.map(n => `<button data-fx="${n}" title="${n}" aria-label="${n}" class="${n.includes('呼吸') ? 'br' : ''} ${s.on && s.effect === n ? 'on' : ''}" style="--c:${EFFECT_COLOR[n] || '#ffffff'}"></button>`).join('')}</div>`;
+    card.querySelector('.h3-x').onclick = closeCard;
+    card.querySelector('[data-k=on]').onclick = () => command(cardId, { on: !state[cardId].on });
+    card.querySelectorAll('[data-m]').forEach(b => b.onclick = () => {
+      const m = b.dataset.m;
+      command(cardId, { music: m, ...(m === 'play' ? { playing: true } : m === 'pause' ? { playing: false } : {}) });
+    });
+    const r = card.querySelector('input[data-k=volume]');
+    r.oninput = () => { const v = +r.value; card.querySelector('[data-v=volume]').textContent = `${v}%`; r.style.setProperty('--trk', `linear-gradient(90deg,#c9b8ff ${v}%,rgba(255,255,255,.14) ${v}%)`); };
+    r.onchange = () => command(cardId, { volume: +r.value });
+    card.querySelectorAll('[data-mood]').forEach(b => b.onclick = () => {
+      const m = TT_MOODS[+b.dataset.mood];
+      command(cardId, { on: true, effect: m.fx, music: 'play', playing: true, volume: m.vol });
+    });
+    card.querySelectorAll('[data-fx]').forEach(b => b.onclick = () => command(cardId, { on: true, effect: b.dataset.fx }));
+  }
   function renderCard() {
     const e = entities.find(x => x.id === cardId), s = state[cardId], mt = meta[cardId] || {};
+    if (e.type === 'light' && lamps[cardId]?.l.shape === 'turntable') return renderTurntableSheet(e, s, mt);
     if (e.type === 'light') return renderLightSheet(e, s, mt);
     let body = '';
     if (e.type === 'blind') body = `

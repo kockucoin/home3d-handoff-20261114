@@ -30,7 +30,11 @@ class Home3DCard extends HTMLElement {
   setConfig(config) {
     this._config = { entities: {}, ...config };
     this._map = {};
-    for (const [id, v] of Object.entries(this._config.entities || {})) this._map[id] = typeof v === 'string' ? v : v.entity;
+    this._media = {};   // 3D 对象 → 关联的媒体播放器（唱片机：entity + media）
+    for (const [id, v] of Object.entries(this._config.entities || {})) {
+      this._map[id] = typeof v === 'string' ? v : v.entity;
+      if (v && typeof v === 'object' && v.media) this._media[id] = v.media;
+    }
   }
   getCardSize() { return 12; }
   getGridOptions() { return { columns: 'full', rows: 'auto' }; }
@@ -75,8 +79,10 @@ class Home3DCard extends HTMLElement {
     for (const [id, eid] of Object.entries(this._map)) {
       const st = h.states[eid];
       if (!st) { this._api.setMeta(id, { linked: false }); continue; }
-      if (this._last[id] === st.last_updated) continue;
-      this._last[id] = st.last_updated;
+      const ms = this._media[id] && h.states[this._media[id]];
+      const stamp = st.last_updated + (ms ? ms.last_updated : '');
+      if (this._last[id] === stamp) continue;
+      this._last[id] = stamp;
       const a = st.attributes, dom = eid.split('.')[0], unavailable = st.state === 'unavailable';
       this._api.setMeta(id, {
         linked: true, unavailable,
@@ -91,6 +97,10 @@ class Home3DCard extends HTMLElement {
         if (a.brightness != null) p.brightness = Math.max(1, Math.round((a.brightness / 255) * 100));
         if (a.color_temp_kelvin != null) p.ct = Math.round(a.color_temp_kelvin / 100) * 100;
         p.effect = a.effect ?? null;
+        if (ms) {
+          if (['playing', 'paused'].includes(ms.state)) p.playing = ms.state === 'playing';
+          if (ms.attributes.volume_level != null) p.volume = Math.round(ms.attributes.volume_level * 100);
+        }
       } else if (dom === 'cover') {
         p.position = a.current_position ?? (st.state === 'open' ? 100 : 0);
       } else if (dom === 'climate') {
@@ -113,6 +123,14 @@ class Home3DCard extends HTMLElement {
     const call = (d, svc, data = {}) => h.callService(d, svc, { entity_id: eid, ...data });
     if (dom === 'switch') return call('switch', patch.on === false ? 'turn_off' : 'turn_on');
     if (dom === 'light') {
+      // 关联媒体播放器（唱片机）：播放控制 / 音量
+      const mp = this._media[id];
+      if (mp) {
+        const mcall = (svc, data = {}) => h.callService('media_player', svc, { entity_id: mp, ...data });
+        if (patch.volume != null) mcall('volume_set', { volume_level: patch.volume / 100 });
+        if (patch.music) mcall({ play: 'media_play', pause: 'media_pause', next: 'media_next_track', previous: 'media_previous_track' }[patch.music] || 'media_play_pause');
+        if (patch.on == null && patch.effect == null) return;
+      }
       if (patch.on === false) return call('light', 'turn_off');
       // 情绪灯光：轻点开灯（没有指定亮度/色温）时，按天气和昼夜选亮度色温；按住选的预设不受影响
       const onOff = Array.isArray(a.supported_color_modes) && a.supported_color_modes.every(m => m === 'onoff');
