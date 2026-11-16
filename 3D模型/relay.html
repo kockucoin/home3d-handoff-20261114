@@ -552,6 +552,8 @@ const CSS2 = `
 .h3-fx button{flex:1;aspect-ratio:1;max-width:42px;border-radius:50%;border:2px solid rgba(255,255,255,.25);background:var(--c);cursor:pointer;position:relative;padding:0}
 .h3-fx button.br::after{content:'';position:absolute;inset:-6px;border-radius:50%;border:1px dashed var(--c);opacity:.7}
 .h3-fx button.on{border-color:#fff;box-shadow:0 0 14px var(--c)}
+.h3-fx button.off{--c:rgba(255,255,255,.12);color:#fff;font-size:18px;display:grid;place-items:center}
+.h3-fx button.off.on{--c:rgba(255,255,255,.28);box-shadow:none}
 .h3-bar.simple .h3-clock small{white-space:nowrap}
 .h3-bar.simple{gap:10px;padding:7px 7px 7px 16px;border-radius:26px;flex-wrap:nowrap}
 .h3-wx{font-size:13px;white-space:nowrap;display:flex;align-items:center;gap:4px}.h3-wx[hidden]{display:none}.h3-wx i{font-style:normal;font-size:17px}
@@ -895,8 +897,6 @@ function createHome3D(container, data, opts = {}) {
   function renderLightSheet(e, s, mt) {
     const minK = mt.minK || 2700, maxK = mt.maxK || 6500, clampK = k => Math.min(maxK, Math.max(minK, k));
     const status = mt.unavailable ? '设备离线' : mt.busy ? '切换中…' : !s.on ? '已关闭' : mt.onOffOnly ? `已开启${s.effect ? ` · ${s.effect}` : ''}` : `已开启 · ${s.brightness}% · ${s.ct}K`;
-    const fx = mt.effects?.length ? `<div class="h3-lab"><span>灯效</span><span>${s.effect || ''}</span></div>
-      <div class="h3-pre">${mt.effects.map(n => `<button data-fx="${n}" class="${s.on && s.effect === n ? 'on' : ''}">${n}</button>`).join('')}</div>` : '';
     const pre = PRESETS.map((p, i) => `<button data-preset="${i}" class="${s.on && Math.abs(s.brightness - p.b) <= 3 && Math.abs(s.ct - clampK(p.ct)) <= 150 ? 'on' : ''}">${p.k}<i>${p.b}%</i></button>`).join('');
     card.innerHTML = `<div class="h3-head"><button class="ic ${s.on ? 'on' : ''}" data-k="on" aria-label="开关" ${mt.busy ? 'disabled' : ''}>${ICON.light}</button>
       <div class="t"><b>${e.label}</b><small>${e.room} · ${status}${mt.linked ? '' : '（模拟）'}</small></div><button class="h3-x" aria-label="收起">×</button></div>
@@ -904,10 +904,9 @@ function createHome3D(container, data, opts = {}) {
       <input type="range" class="h3-r" data-k="brightness" min="1" max="100" value="${s.brightness}" style="--trk:linear-gradient(90deg,#ffd27a ${s.brightness}%,rgba(255,255,255,.14) ${s.brightness}%)">
       <div class="h3-lab"><span>色温</span><span data-v="ct">${s.ct}K</span></div>
       <input type="range" class="h3-r" data-k="ct" min="${minK}" max="${maxK}" step="100" value="${clampK(s.ct)}" style="--trk:linear-gradient(90deg,#ff9f43,#ffe6c4 50%,#dcebff)">
-      <div class="h3-pre">${pre}</div>`}${fx}`;
+      <div class="h3-pre">${pre}</div>`}`;
     card.querySelector('.h3-x').onclick = closeCard;
     card.querySelector('[data-k=on]').onclick = () => command(cardId, { on: !state[cardId].on });
-    card.querySelectorAll('[data-fx]').forEach(b => b.onclick = () => command(cardId, { on: true, effect: b.dataset.fx }));
     card.querySelectorAll('input.h3-r').forEach(r => {
       r.oninput = () => {
         const k = r.dataset.k, v = +r.value;
@@ -934,7 +933,7 @@ function createHome3D(container, data, opts = {}) {
       <div class="h3-lab"><span>情绪模式</span><span></span></div>
       <div class="h3-pre">${TT_MOODS.map((m, i) => `<button data-mood="${i}" class="${moodOn(m) ? 'on' : ''}">${m.k}<i>${m.sub}</i></button>`).join('')}</div>
       <div class="h3-lab"><span>灯效</span><span>${s.on && s.effect ? s.effect : ''}</span></div>
-      <div class="h3-fx">${fxNames.map(n => `<button data-fx="${n}" title="${n}" aria-label="${n}" class="${n.includes('呼吸') ? 'br' : ''} ${s.on && s.effect === n ? 'on' : ''}" style="--c:${EFFECT_COLOR[n] || '#ffffff'}"></button>`).join('')}</div>`;
+      <div class="h3-fx"><button data-off class="off ${s.on ? '' : 'on'}" title="关灯" aria-label="关灯">⏻</button>${fxNames.map(n => `<button data-fx="${n}" title="${n}" aria-label="${n}" class="${n.includes('呼吸') ? 'br' : ''} ${s.on && s.effect === n ? 'on' : ''}" style="--c:${EFFECT_COLOR[n] || '#ffffff'}"></button>`).join('')}</div>`;
     card.querySelector('.h3-x').onclick = closeCard;
     card.querySelector('[data-k=on]').onclick = () => command(cardId, { on: !state[cardId].on });
     card.querySelectorAll('[data-m]').forEach(b => b.onclick = () => {
@@ -949,6 +948,7 @@ function createHome3D(container, data, opts = {}) {
       command(cardId, { on: true, effect: m.fx, music: 'play', playing: true, volume: m.vol });
     });
     card.querySelectorAll('[data-fx]').forEach(b => b.onclick = () => command(cardId, { on: true, effect: b.dataset.fx }));
+    card.querySelector('[data-off]').onclick = () => command(cardId, { on: false });
   }
   function renderCard() {
     const e = entities.find(x => x.id === cardId), s = state[cardId], mt = meta[cardId] || {};

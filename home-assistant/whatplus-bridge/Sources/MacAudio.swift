@@ -32,6 +32,9 @@ final class MacAudio {
 
     func handle(_ body: [String: Any]) -> Error? {
         guard let action = body["action"] as? String else { return BridgeError("缺少 action") }
+        // 要播放时，声音还没输出到唱片机就先切过去（失败不影响播放命令本身）
+        if ["play", "toggle"].contains(action), !(defaultOutputName() ?? "").contains(deviceName),
+           let e = routeToTurntable() { log("自动切换输出失败：\(e)") }
         if action == "next" || action == "previous" {
             if let e = pressMediaKey(action == "next" ? 17 : 18) { return e }  // NX_KEYTYPE_NEXT / PREVIOUS
         } else if let code = MacAudio.commands[action] {
