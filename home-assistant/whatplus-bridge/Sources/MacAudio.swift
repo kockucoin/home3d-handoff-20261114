@@ -35,6 +35,14 @@ final class MacAudio {
         // 要播放时，声音还没输出到唱片机就先切过去（失败不影响播放命令本身）
         if ["play", "toggle"].contains(action), !(defaultOutputName() ?? "").contains(deviceName),
            let e = routeToTurntable() { log("自动切换输出失败：\(e)") }
+        // 有辅助功能权限时，播放/暂停也用 ⏯ 媒体键（与手按键盘一致，对 Chrome 网页播放器等都有效；
+        // 实测 HA 那台 Mac 上系统媒体命令对网页歌单无效）。媒体键只能切换，所以 play/pause 都按一次 ⏯
+        if ["play", "pause", "toggle"].contains(action), AXIsProcessTrusted() {
+            if let e = pressMediaKey(16) { return e }   // NX_KEYTYPE_PLAY
+            lastCommand = action
+            lastCommandAt = Date()
+            return nil
+        }
         if action == "next" || action == "previous" {
             if let e = pressMediaKey(action == "next" ? 17 : 18) { return e }  // NX_KEYTYPE_NEXT / PREVIOUS
         } else if let code = MacAudio.commands[action] {
