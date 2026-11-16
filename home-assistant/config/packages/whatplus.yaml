@@ -1,7 +1,7 @@
 # WhatPlus 1916 Pro 唱片机：经 whatplus-bridge（BLE → HTTP）控制
 # 依赖 secrets.yaml 里的 whatplus_* 四项，见 home-assistant/whatplus-bridge/README.md
 # 实体：
-#   light.whatplus_light          唱片机灯（开关 + 6 种灯效）
+#   light.whatplus_light          唱片机灯（开关 + 6 种灯效：冷白常亮 / 暖白、红橙、浅蓝、深蓝、紫色呼吸）
 #   select.whatplus_light_mode    灯光模式（常规模式 / 灯效模式；选灯效会自动切到灯效模式）
 #   button.whatplus_play / _pause 让连着唱片机的手机播放 / 暂停
 #   button.whatplus_refresh       从设备读一次真实状态
@@ -93,11 +93,12 @@ template:
         unique_id: whatplus_light
         availability: "{{ states('sensor.whatplus_state') not in ['unavailable', 'unknown'] }}"
         state: "{{ (state_attr('sensor.whatplus_state', 'light') or {}).get('on', false) }}"
-        effect_list: "{{ ['灯效 1', '灯效 2', '灯效 3', '灯效 4', '灯效 5', '灯效 6'] }}"
+        # 顺序对应设备灯效 0–5（2026-11-16 逐个肉眼确认）
+        effect_list: "{{ ['冷白常亮', '暖白呼吸', '红橙呼吸', '浅蓝呼吸', '深蓝呼吸', '紫色呼吸'] }}"
         # 灯效只在「灯效模式」下可见；常规模式下不显示当前灯效
         effect: >-
           {% set l = state_attr('sensor.whatplus_state', 'light') or {} %}
-          {{ '灯效 %d' % (l.effect + 1) if l.get('mode') == 1 and l.effect is number else none }}
+          {{ ['冷白常亮', '暖白呼吸', '红橙呼吸', '浅蓝呼吸', '深蓝呼吸', '紫色呼吸'][l.get('effect')] if l.get('mode') == 1 and l.get('effect') in range(6) else none }}
         turn_on:
           - action: script.whatplus_send
             data:
@@ -112,7 +113,7 @@ template:
           - action: script.whatplus_send
             data:
               kind: light
-              body: "{{ {'effect': (effect | replace('灯效 ', '') | int) - 1} }}"
+              body: "{{ {'effect': ['冷白常亮', '暖白呼吸', '红橙呼吸', '浅蓝呼吸', '深蓝呼吸', '紫色呼吸'].index(effect)} }}"
 
   - select:
       - name: WhatPlus Light Mode
