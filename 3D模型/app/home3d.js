@@ -441,6 +441,18 @@ function buildLamp(l) {
   } else if (l.shape === 'bulb') {
     cord(2600, 2700, '#eeeeee');
     at(g, new THREE.Mesh(new THREE.SphereGeometry(0.055, 20, 12), shade({ color: '#ffffff', transparent: true, opacity: 0.95 })), X, M(2560), Y);
+  } else if (l.shape === 'turntable') {
+    // 胡桃木底座 + 茶色防尘盖，转盘边缘一圈氛围灯（glow）；长边沿 y（靠东墙摆放）
+    const base = M(l.z ?? 1000);
+    at(g, rbox(0.33, 0.1, 0.43, 0.012, mat('#7a4a2a', { roughness: 0.55 })), X, base + 0.05, Y);
+    at(g, cylM(0.155, 0.155, 0.012, mat('#1d1d1f', { roughness: 0.4 }), 48), X, base + 0.106, Y - 0.02);
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.158, 0.008, 8, 64), shade({ color: '#9fd8ff' }));
+    ring.rotation.x = Math.PI / 2; at(g, ring, X, base + 0.103, Y - 0.02);
+    const halo = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.17, 0.004, 64), shade({ color: '#9fd8ff', transparent: true, opacity: 0.55 }));
+    at(g, halo, X, base + 0.101, Y - 0.02);
+    at(g, cylM(0.005, 0.005, 0.2, metal('#c8c8c8'), 8), X + 0.12, base + 0.115, Y + 0.08);
+    const lid = new THREE.Mesh(new THREE.BoxGeometry(0.33, 0.07, 0.43), mat('#3a3030', { transparent: true, opacity: 0.28, roughness: 0.1 }));
+    at(g, lid, X, base + 0.135, Y);
   } else if (l.shape === 'floor') {
     at(g, cylM(0.13, 0.14, 0.02, mat('#222')), X, 0.01, Y);
     at(g, cylM(0.01, 0.01, 1.62, metal('#b9bcc0'), 8), X, 0.83, Y);
@@ -450,7 +462,9 @@ function buildLamp(l) {
   return g;
 }
 // 灯光强度（坎德拉，三维场景按米计）
-const LIGHT_POWER = { lantern: 6.5, drum: 3.5, woven: 4, square: 4, round: 2.5, bulb: 3, floor: 1.4, mushroom: 0.7 };
+const LIGHT_POWER = { lantern: 6.5, drum: 3.5, woven: 4, square: 4, round: 2.5, bulb: 3, floor: 1.4, mushroom: 0.7, turntable: 0.5 };
+// 唱片机灯效 → 颜色（名称与 HA 的 light.whatplus_light 一致）；名字含「呼吸」的会明暗起伏
+const EFFECT_COLOR = { 冷白常亮: '#dcebff', 暖白呼吸: '#ffc879', 红橙呼吸: '#ff5a1f', 浅蓝呼吸: '#4fc3ff', 深蓝呼吸: '#2a55ff', 紫色呼吸: '#a04dff' };
 function kelvinRGB(k) {          // 色温 → 颜色（近似）
   const t = k / 100; let r, g, b;
   r = t <= 66 ? 255 : 329.7 * Math.pow(t - 60, -0.1332);
@@ -685,7 +699,7 @@ function createHome3D(container, data, opts = {}) {
     const g = buildLamp(l); scene.add(g);
     g.traverse(o => { if (o.isMesh) { o.castShadow = false; o.userData.lid = l.id; } });
     const pl = new THREE.PointLight('#ffd59a', 0, l.shadow ? 0 : 3.2, 2);
-    pl.position.copy(P(l.x, l.y, (l.z ?? 2400) - (l.shape === 'mushroom' ? -60 : 120)));
+    pl.position.copy(P(l.x, l.y, l.shape === 'turntable' ? (l.z ?? 1000) + 160 : (l.z ?? 2400) - (l.shape === 'mushroom' ? -60 : 120)));
     if (l.shadow) { pl.castShadow = true; pl.shadow.mapSize.set(touch ? 256 : 512, touch ? 256 : 512); pl.shadow.bias = -0.004; pl.shadow.normalBias = 0.03; pl.shadow.camera.near = 0.05; pl.shadow.camera.far = 10; }
     scene.add(pl);
     // 灯具本体太小，加一个看不见的大号点击区
@@ -715,7 +729,9 @@ function createHome3D(container, data, opts = {}) {
   // ---- 应用状态到 3D ----
   let night = false, mode = 'auto';
   function applyLight(id) {
-    const s = state[id], L = lamps[id], k = s.on ? s.brightness / 100 : 0, col = kelvinRGB(s.ct);
+    const s = state[id], L = lamps[id], tt = L.l.shape === 'turntable';
+    const k = s.on ? (tt ? (s.breath ?? 1) : s.brightness / 100) : 0;
+    const col = tt ? new THREE.Color(EFFECT_COLOR[s.effect] || EFFECT_COLOR.冷白常亮) : kelvinRGB(s.ct);
     L.pl.color.copy(col); L.pl.intensity = k * (LIGHT_POWER[L.l.shape] ?? 6) * (night ? 1 : 0.6);
     for (const m of L.g.userData.glow) { m.emissive.copy(col); m.emissiveIntensity = k * 1.1; }
   }
@@ -850,7 +866,9 @@ function createHome3D(container, data, opts = {}) {
   function closeCard() { cardId = null; card.hidden = true; refreshUI(); }
   function renderLightSheet(e, s, mt) {
     const minK = mt.minK || 2700, maxK = mt.maxK || 6500, clampK = k => Math.min(maxK, Math.max(minK, k));
-    const status = mt.unavailable ? '设备离线' : mt.busy ? '切换中…' : s.on ? `已开启 · ${s.brightness}% · ${s.ct}K` : '已关闭';
+    const status = mt.unavailable ? '设备离线' : mt.busy ? '切换中…' : !s.on ? '已关闭' : mt.onOffOnly ? `已开启${s.effect ? ` · ${s.effect}` : ''}` : `已开启 · ${s.brightness}% · ${s.ct}K`;
+    const fx = mt.effects?.length ? `<div class="h3-lab"><span>灯效</span><span>${s.effect || ''}</span></div>
+      <div class="h3-pre">${mt.effects.map(n => `<button data-fx="${n}" class="${s.on && s.effect === n ? 'on' : ''}">${n}</button>`).join('')}</div>` : '';
     const pre = PRESETS.map((p, i) => `<button data-preset="${i}" class="${s.on && Math.abs(s.brightness - p.b) <= 3 && Math.abs(s.ct - clampK(p.ct)) <= 150 ? 'on' : ''}">${p.k}<i>${p.b}%</i></button>`).join('');
     card.innerHTML = `<div class="h3-head"><button class="ic ${s.on ? 'on' : ''}" data-k="on" aria-label="开关" ${mt.busy ? 'disabled' : ''}>${ICON.light}</button>
       <div class="t"><b>${e.label}</b><small>${e.room} · ${status}${mt.linked ? '' : '（模拟）'}</small></div><button class="h3-x" aria-label="收起">×</button></div>
@@ -858,9 +876,10 @@ function createHome3D(container, data, opts = {}) {
       <input type="range" class="h3-r" data-k="brightness" min="1" max="100" value="${s.brightness}" style="--trk:linear-gradient(90deg,#ffd27a ${s.brightness}%,rgba(255,255,255,.14) ${s.brightness}%)">
       <div class="h3-lab"><span>色温</span><span data-v="ct">${s.ct}K</span></div>
       <input type="range" class="h3-r" data-k="ct" min="${minK}" max="${maxK}" step="100" value="${clampK(s.ct)}" style="--trk:linear-gradient(90deg,#ff9f43,#ffe6c4 50%,#dcebff)">
-      <div class="h3-pre">${pre}</div>`}`;
+      <div class="h3-pre">${pre}</div>`}${fx}`;
     card.querySelector('.h3-x').onclick = closeCard;
     card.querySelector('[data-k=on]').onclick = () => command(cardId, { on: !state[cardId].on });
+    card.querySelectorAll('[data-fx]').forEach(b => b.onclick = () => command(cardId, { on: true, effect: b.dataset.fx }));
     card.querySelectorAll('input.h3-r').forEach(r => {
       r.oninput = () => {
         const k = r.dataset.k, v = +r.value;
@@ -971,7 +990,7 @@ function createHome3D(container, data, opts = {}) {
 
   // 点房间：开/关这个房间里离点击处最近的主灯（餐厅属于客厅这块地面）
   function roomLamp(room, pt) {
-    const cand = data.lights.filter(l => (l.room === room || (room === '客厅' && l.room === '餐厅')) && !hiddenIcon(l.id) && !['floor', 'mushroom'].includes(l.shape));
+    const cand = data.lights.filter(l => (l.room === room || (room === '客厅' && l.room === '餐厅')) && !hiddenIcon(l.id) && !['floor', 'mushroom', 'turntable'].includes(l.shape));
     if (!cand.length) { if (simple) toast('这个房间还没有接入灯'); return null; }
     return cand.reduce((a, l) => { const d = Math.hypot(M(l.x) - pt.x, M(l.y) - pt.z); return d < a.d ? { l, d } : a; }, { l: null, d: Infinity }).l.id;
   }
@@ -1028,6 +1047,11 @@ function createHome3D(container, data, opts = {}) {
   let lastT = 0;
   function loop(t) {
     const dt = Math.min(0.05, (t - (lastT || t)) / 1000); lastT = t; stepWeatherFx(dt);
+    for (const id in lamps) {        // 唱片机「呼吸」灯效：明暗起伏（约 4 秒一个周期）
+      if (lamps[id].l.shape !== 'turntable') continue;
+      const s = state[id], b = s.on && String(s.effect || '').includes('呼吸') ? 0.35 + 0.65 * (0.5 + 0.5 * Math.sin(t / 650)) : 1;
+      if (Math.abs((s.breath ?? 1) - b) > 0.02) { s.breath = b; applyLight(id); }
+    }
     if (anim) {
       const k = Math.min(1, (t - anim.t0) / anim.ms), e = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
       controls.target.lerpVectors(anim.ft, anim.tt, e); camera.position.lerpVectors(anim.fp, anim.tp, e);

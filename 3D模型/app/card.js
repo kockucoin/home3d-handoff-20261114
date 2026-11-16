@@ -81,6 +81,8 @@ class Home3DCard extends HTMLElement {
       this._api.setMeta(id, {
         linked: true, unavailable,
         effects: a.effect_list || null,
+        // 只能开关的灯（如唱片机）：不显示亮度/色温，也不套用天气亮度
+        onOffOnly: Array.isArray(a.supported_color_modes) && a.supported_color_modes.every(m => m === 'onoff'),
         minK: a.min_color_temp_kelvin, maxK: a.max_color_temp_kelvin,
       });
       let p = {};
@@ -113,13 +115,14 @@ class Home3DCard extends HTMLElement {
     if (dom === 'light') {
       if (patch.on === false) return call('light', 'turn_off');
       // 情绪灯光：轻点开灯（没有指定亮度/色温）时，按天气和昼夜选亮度色温；按住选的预设不受影响
-      if (this._config.mood_by_weather && patch.on === true && patch.brightness == null && patch.ct == null && st?.state !== 'on') {
+      const onOff = Array.isArray(a.supported_color_modes) && a.supported_color_modes.every(m => m === 'onoff');
+      if (this._config.mood_by_weather && !onOff && patch.on === true && patch.brightness == null && patch.ct == null && st?.state !== 'on') {
         const m = moodFor(h, h.states[this._config.weather] ? this._config.weather : Object.keys(h.states).find(k => k.startsWith('weather.')));
         return call('light', 'turn_on', { brightness_pct: m.b, color_temp_kelvin: Math.min(a.max_color_temp_kelvin || 6500, Math.max(a.min_color_temp_kelvin || 2700, m.ct)) });
       }
       const data = {};
-      if (patch.brightness != null) data.brightness_pct = patch.brightness;
-      if (patch.ct != null) data.color_temp_kelvin = Math.min(a.max_color_temp_kelvin || 6500, Math.max(a.min_color_temp_kelvin || 2700, patch.ct));
+      if (patch.brightness != null && !onOff) data.brightness_pct = patch.brightness;
+      if (patch.ct != null && !onOff) data.color_temp_kelvin = Math.min(a.max_color_temp_kelvin || 6500, Math.max(a.min_color_temp_kelvin || 2700, patch.ct));
       if (patch.effect != null) data.effect = patch.effect;
       return call('light', 'turn_on', data);
     }

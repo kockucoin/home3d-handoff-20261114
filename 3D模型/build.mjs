@@ -189,12 +189,15 @@ box('balcony_lounge', 4600, 11800, 5500, 12450, 0, 450, '#5b5b5b', 1, F);
 // ---------- 灯具（HA 控制对象，按照片款式；2026-11-14 按新照片更新） ----------
 // shape: square 方形吸顶 / round 圆形吸顶 / bulb 灯泡 / floor 落地灯
 //        lantern 纸灯笼吊灯 / drum 布罩吊灯 / woven 编织吊灯 / mushroom 蘑菇台灯
+//        turntable 唱片机（转盘氛围灯，颜色跟随灯效；放在 z 高度的台面上）
 // shadow: 该灯在 3D 页面里投射阴影（光被墙挡住，只照亮本房间）
 const lights = [
   { id: 'living_ceiling_light', label: '客厅灯笼吊灯', room: '客厅', x: 5150, y: 9000, shape: 'lantern', s: 250, shadow: true },
   { id: 'living_floor_lamp', label: '客厅落地灯', room: '客厅', x: 3720, y: 10250, shape: 'floor' },
   { id: 'dining_pendant', label: '餐厅布罩吊灯', room: '餐厅', x: 4400, y: 4800, shape: 'drum', s: 230, shadow: true },
   { id: 'dining_table_lamp', label: '餐边柜蘑菇灯', room: '餐厅', x: 5720, y: 3650, shape: 'mushroom' },
+  // WhatPlus 1916 Pro 唱片机，放在入户门旁餐边置物架（shelfOpen，高 1000）上层（2026-11-16 照片）
+  { id: 'dining_turntable', label: '唱片机', room: '餐厅', x: 5720, y: 4000, z: 1000, shape: 'turntable' },
   { id: 'kitchen_light', label: '厨房灯', room: '厨房', x: 4940, y: 2000, shape: 'square', s: 580, shadow: true },
   { id: 'bedroom_b_ceiling_light', label: '卧室B编织吊灯', room: '卧室B', x: 1500, y: 10300, shape: 'woven', s: 260, shadow: true },
   { id: 'bedroom_a_ceiling_light', label: '卧室A灯泡', room: '卧室A', x: 1440, y: 5460, shape: 'bulb', shadow: true },
