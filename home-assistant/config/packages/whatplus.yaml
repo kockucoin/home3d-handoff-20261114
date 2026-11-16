@@ -6,6 +6,8 @@
 #   button.whatplus_play / _pause 让连着唱片机的手机播放 / 暂停
 #   button.whatplus_refresh       从设备读一次真实状态
 #   sensor.whatplus_state         桥接缓存的状态（不会为轮询去占蓝牙）
+#   media_player.whatplus_music   唱片机音乐：桥接所在 Mac 当音源时，控制播放/暂停/切歌/音量
+#   button.whatplus_mac_output    把 Mac 的声音切到唱片机（必要时连上蓝牙音频）
 
 homeassistant:
   customize:
@@ -21,6 +23,12 @@ homeassistant:
       friendly_name: 唱片机 刷新状态
     sensor.whatplus_state:
       friendly_name: 唱片机桥接
+    sensor.whatplus_mac_audio:
+      friendly_name: 唱片机音源 Mac
+    media_player.whatplus_music:
+      friendly_name: 唱片机音乐
+    button.whatplus_mac_output:
+      friendly_name: 唱片机 用 Mac 放音乐
 
 rest_command:
   whatplus_light:
@@ -39,6 +47,14 @@ rest_command:
     content_type: application/json
     payload: "{{ body | to_json }}"
     timeout: 25
+  whatplus_mac:
+    url: !secret whatplus_mac_music_url
+    method: post
+    headers:
+      Authorization: !secret whatplus_auth
+    content_type: application/json
+    payload: "{{ body | to_json }}"
+    timeout: 20
   whatplus_refresh:
     url: !secret whatplus_refresh_url
     method: get
@@ -63,6 +79,23 @@ rest:
           - live
           - bluetooth
           - updated_at
+  # 桥接所在 Mac 的音频状态（音量、当前输出设备）；不涉及唱片机 BLE
+  - resource: !secret whatplus_mac_state_url
+    headers:
+      Authorization: !secret whatplus_auth
+    scan_interval: 15
+    timeout: 5
+    sensor:
+      - name: WhatPlus Mac Audio
+        unique_id: whatplus_mac_audio
+        value_template: "{{ 'turntable' if value_json.output_is_turntable else 'other' }}"
+        json_attributes:
+          - output_device
+          - output_is_turntable
+          - volume
+          - muted
+          - last_command
+          - last_command_at
 
 script:
   whatplus_send:
@@ -86,6 +119,61 @@ script:
       - action: homeassistant.update_entity
         target:
           entity_id: sensor.whatplus_state
+
+  whatplus_mac:
+    alias: 唱片机：控制 Mac 音源
+    mode: queued
+    fields:
+      body:
+        description: 发给桥接 /v1/mac/music 的 JSON
+    sequence:
+      - action: rest_command.whatplus_mac
+        data:
+          body: "{{ body }}"
+      - action: homeassistant.update_entity
+        target:
+          entity_id: sensor.whatplus_mac_audio
+
+media_player:
+  # 没有子播放器的 universal：所有命令都转给桥接。
+  # macOS 不允许读取歌名和播放状态，所以这里只显示音量和最近一次命令。
+  - platform: universal
+    name: WhatPlus Music
+    unique_id: whatplus_music
+    state_template: >-
+      {% set c = state_attr('sensor.whatplus_mac_audio', 'last_command') %}
+      {% if states('sensor.whatplus_mac_audio') in ['unavailable', 'unknown'] %}off
+      {% elif c == 'pause' %}paused
+      {% elif c in ['play', 'next', 'previous'] %}playing
+      {% else %}on{% endif %}
+    attributes:
+      is_volume_muted: sensor.whatplus_mac_audio|muted
+    commands:
+      media_play:
+        action: script.whatplus_mac
+        data: {body: {action: play}}
+      media_pause:
+        action: script.whatplus_mac
+        data: {body: {action: pause}}
+      media_play_pause:
+        action: script.whatplus_mac
+        data: {body: {action: toggle}}
+      media_next_track:
+        action: script.whatplus_mac
+        data: {body: {action: next}}
+      media_previous_track:
+        action: script.whatplus_mac
+        data: {body: {action: previous}}
+      volume_up:
+        action: script.whatplus_mac
+        data: {body: {action: volume_up}}
+      volume_down:
+        action: script.whatplus_mac
+        data: {body: {action: volume_down}}
+      volume_set:
+        action: script.whatplus_mac
+        data:
+          body: "{{ {'action': 'volume', 'value': (volume_level * 100) | round(0) | int} }}"
 
 template:
   - light:
@@ -144,6 +232,12 @@ template:
             data:
               kind: music
               body: {action: pause}
+      - name: WhatPlus Mac Output
+        unique_id: whatplus_mac_output
+        press:
+          - action: script.whatplus_mac
+            data:
+              body: {action: output}
       - name: WhatPlus Refresh
         unique_id: whatplus_refresh
         press:

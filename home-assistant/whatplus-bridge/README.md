@@ -16,7 +16,27 @@
 | 灯效 6 种 | ✅ 逐个肉眼确认：0 冷白常亮、1 暖白呼吸、2 红橙呼吸、3 浅蓝呼吸、4 深蓝呼吸、5 紫色呼吸；**只在「灯效模式」下可见**，选灯效时会自动切过去 |
 | 常规模式 / 灯效模式 | ✅ 设备确认；常规模式的具体样子以实物为准 |
 | 播放 / 暂停 | ⚠️ 实验性：设备确认过一次暂停，但见下方「已知限制」 |
-| 上一首 / 下一首 / 音量 | ❌ 抓包里 App 没有为它们发 BLE 指令（由手机自己处理），桥接做不了 |
+| 上一首 / 下一首 / 音量（经手机） | ❌ 抓包里 App 没有为它们发 BLE 指令；改用 Mac 当音源可以做到，见下节 |
+
+## 用这台 Mac 当音源放音乐（推荐）
+
+桥接所在的 Mac 通过蓝牙把唱片机当音箱放歌时，HA 里的「唱片机音乐」可以控制 Mac 上的播放器
+（2026-11-16 用 QQ 音乐实测，Apple Music / Spotify 同理）：
+
+| 功能 | 方式 | 状态 |
+|---|---|---|
+| 播放 / 暂停 | 系统“正在播放”媒体命令 | ✅ 实测，无需额外权限 |
+| 上一首 / 下一首 | 模拟键盘 ⏮/⏭ 媒体键（QQ 音乐不响应上面的命令） | ✅ 都已实测；需**辅助功能权限** |
+| 音量 | Mac 输出音量（输出到唱片机即唱片机音量） | ✅ 实测 |
+| 切到唱片机 | 「唱片机 用 Mac 放音乐」按钮：连上蓝牙音频并设为默认输出 | ⚠️ 已在输出的情况下验证；从断开状态自动连接未实测 |
+| 歌名 / 播放状态 | macOS 不允许普通程序读取 | ❌ 只显示音量和最近一次命令 |
+
+**辅助功能权限**：系统设置 → 隐私与安全性 → 辅助功能 → 打开 WhatPlusBridge。
+注意要给 `install.sh` 装好的那份（`~/Applications/WhatPlusBridge.app`）；每次重新编译后签名会变，
+如果上一首/下一首又报“需要辅助功能权限”，把列表里的 WhatPlusBridge 删掉再用「+」重新加一次，然后重启桥接：
+`launchctl kickstart -k gui/$UID/local.home3d.whatplus-bridge`。
+
+Mac 当音源时，控灯和放音乐可以同时进行（实测，先连哪个都行）。
 
 ## 已知限制（重要）
 
@@ -46,8 +66,9 @@ cd home-assistant/whatplus-bridge
 
 1. 第一次运行会弹出「WhatPlusBridge 想使用蓝牙」→ 允许。
    如果没弹：系统设置 → 隐私与安全性 → 蓝牙，打开 WhatPlusBridge。
-2. 把脚本最后打印的五行 `whatplus_*` 加进 HA 的 `config/secrets.yaml`（该文件不进 Git）。
-3. 重启 HA。会出现：`唱片机灯`、`唱片机灯光模式`、`唱片机 播放 / 暂停 / 刷新状态`、`唱片机桥接`。
+2. 把脚本最后打印的七行 `whatplus_*` 加进 HA 的 `config/secrets.yaml`（该文件不进 Git）。
+3. 重启 HA。会出现：`唱片机灯`、`唱片机灯光模式`、`唱片机音乐`（媒体播放器）、`唱片机 用 Mac 放音乐`、
+   `唱片机 播放 / 暂停 / 刷新状态`、`唱片机桥接`、`唱片机音源 Mac`。
    在手机 HA App 里把它们加到仪表盘即可。
 
 卸载：`./uninstall.sh`。日志：`~/Library/Logs/whatplus-bridge.log`。
@@ -62,6 +83,8 @@ cd home-assistant/whatplus-bridge
 | `GET /v1/state` | 缓存状态；`?refresh=1` 去设备读一次 |
 | `POST /v1/light` | `{"power":"on"}` / `{"power":"off"}` / `{"effect":0-5}` / `{"mode":0或1}` |
 | `POST /v1/music` | `{"action":"play"}` / `pause` / `toggle`（实验性） |
+| `GET /v1/mac/state` | 这台 Mac 的输出设备、音量、最近命令 |
+| `POST /v1/mac/music` | `{"action": play / pause / toggle / next / previous / volume_up / volume_down / output}`，或 `{"action":"volume","value":0-100}` |
 
 命令全部串行执行，只有设备回显确认后才返回 200；失败返回 503 和原因。
 

@@ -5,7 +5,7 @@
 #   ./install.sh --lan           # HA 在另一台 Mac：监听 0.0.0.0（仍需令牌）
 #   ./install.sh --port 8765
 #
-# 结束时打印要粘到 HA 的 config/secrets.yaml 里的五行。
+# 结束时打印要粘到 HA 的 config/secrets.yaml 里的七行。
 set -euo pipefail
 cd "${0:A:h}"
 
@@ -81,10 +81,12 @@ else
 fi
 cat <<EOF
 
-—— 把下面五行加到 HA 的 config/secrets.yaml ——
+—— 把下面七行加到 HA 的 config/secrets.yaml ——
 whatplus_auth: "Bearer $(cat "$TOKEN_FILE")"
 whatplus_light_url: "$BASE/v1/light"
 whatplus_music_url: "$BASE/v1/music"
 whatplus_state_url: "$BASE/v1/state"
 whatplus_refresh_url: "$BASE/v1/state?refresh=1"
+whatplus_mac_music_url: "$BASE/v1/mac/music"
+whatplus_mac_state_url: "$BASE/v1/mac/state"
 EOF

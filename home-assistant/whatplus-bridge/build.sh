@@ -6,6 +6,6 @@ APP=build/WhatPlusBridge.app
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS"
 cp Info.plist "$APP/Contents/Info.plist"
-swiftc -O -swift-version 5 -o "$APP/Contents/MacOS/whatplus-bridge" Sources/main.swift
+swiftc -O -swift-version 5 -o "$APP/Contents/MacOS/whatplus-bridge" Sources/*.swift
 codesign --force --sign - "$APP"
 echo "已编译：$PWD/$APP"

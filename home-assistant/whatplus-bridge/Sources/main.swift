@@ -396,11 +396,13 @@ final class Bridge {
 final class HTTPServer {
     let config: Config
     let bridge: Bridge
+    let mac: MacAudio
     private var listener: NWListener!
 
-    init(config: Config, bridge: Bridge) throws {
+    init(config: Config, bridge: Bridge, mac: MacAudio) throws {
         self.config = config
         self.bridge = bridge
+        self.mac = mac
         let params = NWParameters.tcp
         params.requiredLocalEndpoint = .hostPort(host: NWEndpoint.Host(config.host),
                                                  port: NWEndpoint.Port(rawValue: config.port)!)
@@ -457,6 +459,11 @@ final class HTTPServer {
             else { respond(c, 200, bridge.state(live: false)) }
         case ("POST", "/v1/light"): bridge.light(body, done: finish)
         case ("POST", "/v1/music"): bridge.music(body, done: finish)
+        // 这台 Mac 当音源时的播放控制（不经过唱片机 BLE）
+        case ("GET", "/v1/mac/state"): respond(c, 200, mac.state())
+        case ("POST", "/v1/mac/music"):
+            if let err = mac.handle(body) { respond(c, 400, ["error": "\(err)", "state": mac.state()]) }
+            else { respond(c, 200, mac.state()) }
         default: respond(c, 404, ["error": "not found"])
         }
     }
@@ -505,6 +512,7 @@ if config.token.isEmpty { log("警告：未设置令牌，除 /health 外所有�
 let device = Device(config: config)
 let bridge = Bridge(device: device)
 let server: HTTPServer
-do { server = try HTTPServer(config: config, bridge: bridge) } catch { log("启动失败：\(error)"); exit(1) }
+let mac = MacAudio(deviceName: config.deviceName)
+do { server = try HTTPServer(config: config, bridge: bridge, mac: mac) } catch { log("启动失败：\(error)"); exit(1) }
 signal(SIGTERM) { _ in exit(0) }
 RunLoop.main.run()
