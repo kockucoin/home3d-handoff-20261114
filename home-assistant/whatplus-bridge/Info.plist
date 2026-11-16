@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleIdentifier</key><string>local.home3d.whatplus-bridge</string>
+	<key>CFBundleName</key><string>WhatPlusBridge</string>
+	<key>CFBundleExecutable</key><string>whatplus-bridge</string>
+	<key>CFBundlePackageType</key><string>APPL</string>
+	<key>CFBundleShortVersionString</key><string>1.0</string>
+	<key>CFBundleVersion</key><string>1</string>
+	<key>LSMinimumSystemVersion</key><string>13.0</string>
+	<key>LSBackgroundOnly</key><true/>
+	<key>NSBluetoothAlwaysUsageDescription</key><string>连接 WhatPlus 1916 Pro 唱片机，供 Home Assistant 控制灯光和播放。</string>
+</dict>
+</plist>

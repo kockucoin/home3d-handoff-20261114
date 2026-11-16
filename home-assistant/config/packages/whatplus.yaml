@@ -1,0 +1,166 @@
+# WhatPlus 1916 Pro 唱片机：经 whatplus-bridge（BLE → HTTP）控制
+# 依赖 secrets.yaml 里的 whatplus_* 四项，见 home-assistant/whatplus-bridge/README.md
+# 实体：
+#   light.whatplus_light          唱片机灯（开关 + 6 种灯效）
+#   select.whatplus_light_mode    灯光模式（常规模式 / 灯效模式；选灯效会自动切到灯效模式）
+#   button.whatplus_play / _pause 让连着唱片机的手机播放 / 暂停
+#   button.whatplus_refresh       从设备读一次真实状态
+#   sensor.whatplus_state         桥接缓存的状态（不会为轮询去占蓝牙）
+
+homeassistant:
+  customize:
+    light.whatplus_light:
+      friendly_name: 唱片机灯
+    select.whatplus_light_mode:
+      friendly_name: 唱片机灯光模式
+    button.whatplus_play:
+      friendly_name: 唱片机 播放
+    button.whatplus_pause:
+      friendly_name: 唱片机 暂停
+    button.whatplus_refresh:
+      friendly_name: 唱片机 刷新状态
+    sensor.whatplus_state:
+      friendly_name: 唱片机桥接
+
+rest_command:
+  whatplus_light:
+    url: !secret whatplus_light_url
+    method: post
+    headers:
+      Authorization: !secret whatplus_auth
+    content_type: application/json
+    payload: "{{ body | to_json }}"
+    timeout: 25
+  whatplus_music:
+    url: !secret whatplus_music_url
+    method: post
+    headers:
+      Authorization: !secret whatplus_auth
+    content_type: application/json
+    payload: "{{ body | to_json }}"
+    timeout: 25
+  whatplus_refresh:
+    url: !secret whatplus_refresh_url
+    method: get
+    headers:
+      Authorization: !secret whatplus_auth
+    timeout: 25
+
+rest:
+  # 只读桥接缓存，不触发蓝牙连接
+  - resource: !secret whatplus_state_url
+    headers:
+      Authorization: !secret whatplus_auth
+    scan_interval: 30
+    timeout: 5
+    sensor:
+      - name: WhatPlus State
+        unique_id: whatplus_state
+        value_template: "{{ 'connected' if value_json.connected else 'idle' }}"
+        json_attributes:
+          - light
+          - music
+          - live
+          - bluetooth
+          - updated_at
+
+script:
+  whatplus_send:
+    alias: 唱片机：发送指令并刷新
+    mode: queued
+    fields:
+      kind:
+        description: light 或 music
+      body:
+        description: 发给桥接的 JSON
+    sequence:
+      - if: "{{ kind == 'music' }}"
+        then:
+          - action: rest_command.whatplus_music
+            data:
+              body: "{{ body }}"
+        else:
+          - action: rest_command.whatplus_light
+            data:
+              body: "{{ body }}"
+      - action: homeassistant.update_entity
+        target:
+          entity_id: sensor.whatplus_state
+
+template:
+  - light:
+      - name: WhatPlus Light
+        unique_id: whatplus_light
+        availability: "{{ states('sensor.whatplus_state') not in ['unavailable', 'unknown'] }}"
+        state: "{{ (state_attr('sensor.whatplus_state', 'light') or {}).get('on', false) }}"
+        effect_list: "{{ ['灯效 1', '灯效 2', '灯效 3', '灯效 4', '灯效 5', '灯效 6'] }}"
+        # 灯效只在「灯效模式」下可见；常规模式下不显示当前灯效
+        effect: >-
+          {% set l = state_attr('sensor.whatplus_state', 'light') or {} %}
+          {{ '灯效 %d' % (l.effect + 1) if l.get('mode') == 1 and l.effect is number else none }}
+        turn_on:
+          - action: script.whatplus_send
+            data:
+              kind: light
+              body: {power: "on"}
+        turn_off:
+          - action: script.whatplus_send
+            data:
+              kind: light
+              body: {power: "off"}
+        set_effect:
+          - action: script.whatplus_send
+            data:
+              kind: light
+              body: "{{ {'effect': (effect | replace('灯效 ', '') | int) - 1} }}"
+
+  - select:
+      - name: WhatPlus Light Mode
+        unique_id: whatplus_light_mode
+        availability: "{{ states('sensor.whatplus_state') not in ['unavailable', 'unknown'] }}"
+        options: "{{ ['常规模式', '灯效模式'] }}"
+        state: >-
+          {% set m = (state_attr('sensor.whatplus_state', 'light') or {}).get('mode') %}
+          {{ ['常规模式', '灯效模式'][m] if m in [0, 1] else none }}
+        select_option:
+          - action: script.whatplus_send
+            data:
+              kind: light
+              body: "{{ {'mode': 1 if option == '灯效模式' else 0} }}"
+
+  - button:
+      - name: WhatPlus Play
+        unique_id: whatplus_play
+        press:
+          - action: script.whatplus_send
+            data:
+              kind: music
+              body: {action: play}
+      - name: WhatPlus Pause
+        unique_id: whatplus_pause
+        press:
+          - action: script.whatplus_send
+            data:
+              kind: music
+              body: {action: pause}
+      - name: WhatPlus Refresh
+        unique_id: whatplus_refresh
+        press:
+          - action: rest_command.whatplus_refresh
+          - action: homeassistant.update_entity
+            target:
+              entity_id: sensor.whatplus_state
+
+automation:
+  - id: whatplus_refresh_on_start
+    alias: 唱片机：HA 启动后读一次状态
+    triggers:
+      - trigger: homeassistant
+        event: start
+    actions:
+      - delay: 10
+      - action: rest_command.whatplus_refresh
+        continue_on_error: true
+      - action: homeassistant.update_entity
+        target:
+          entity_id: sensor.whatplus_state

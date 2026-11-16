@@ -22,3 +22,6 @@ home-assistant/*.pid
 .claude/
 .DS_Store
 node_modules/
+
+# WhatPlus 桥接编译产物
+home-assistant/whatplus-bridge/build/
